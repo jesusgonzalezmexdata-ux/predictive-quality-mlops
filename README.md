@@ -2,9 +2,31 @@
 
 **Sistema de soporte a decisiones de calidad industrial, de punta a punta:** predice qué lotes de semiconductores (SECOM) tienen riesgo de falla, traduce el resultado a pesos ahorrados o gastados, lo expone como API y dashboard, y vigila su propia degradación. Incluye un módulo de mantenimiento predictivo (NASA C-MAPSS) con vida útil restante (RUL) y costo preventivo vs. correctivo.
 
+## Resumen ejecutivo
+Este sistema convierte datos de 590 sensores en una **decisión por lote** (liberar, vigilar, retener) con su acción y su referencia ISO 9001, mide el efecto en **costo de la no calidad (COPQ)** y avisa cuándo el modelo deja de ser confiable. El diferenciador no es el algoritmo: es la **taxonomía de decisión**, la **incertidumbre visible** y el **log de escrutinio** de lo que falló y se corrigió.
+
 > **Lo que este proyecto demuestra, y lo que no.** Con SECOM hay señal real pero débil: el modelo ordena los lotes mejor que el azar, pero el ahorro económico **no está estadísticamente demostrado** (IC95 % del ahorro: −22 k a +20 k MXN en 313 lotes). Se reporta así a propósito. Con C-MAPSS sí hay un beneficio claro. La contribución es el método, la validación sin fuga de información y la ingeniería, no una cifra inflada.
 
 ![Dashboard](docs/img/dashboard_impacto.png)
+
+## Taxonomía de decisión (ventaja competitiva)
+```mermaid
+flowchart LR
+  L[Lote] --> Q{Puntaje}
+  Q -->|alto| R[ALTO RIESGO: retener + 100 % · ISO 8.7]
+  Q -->|medio| A[VIGILAR: muestreo reforzado · ISO 9.1.3]
+  Q -->|bajo| V[NORMAL: liberar]
+```
+El umbral sale de minimizar costo, no de maximizar F1; la banda intermedia existe porque el modelo es débil. Reglas de proceso: deriva en >20 % de sensores → reentrenar y revisar instrumentos (7.1.5); tasa mensual >2× la media → causa raíz (10.2). Detalle, familias de sensores y diccionario: [`docs/TAXONOMIA.md`](docs/TAXONOMIA.md). El dashboard muestra cada lote con su semáforo, la acción requerida y la tasa observada de falla en lotes parecidos con su intervalo (el puntaje **no** es una probabilidad calibrada).
+
+## Desafíos y validación (log de escrutinio)
+| Hipótesis inicial | Refutación | Corrección |
+|---|---|---|
+| El split aleatorio sirve para evaluar | PR-AUC 0.154 aleatorio vs 0.09 temporal: filtra lotes futuros | Ventanas expansivas + holdout cronológico único |
+| El modelo ahorra dinero | IC95 % del ahorro incluye cero; negativo con razones de costo 5, 10 y 80 | Se publica la incertidumbre y la sensibilidad; se compara con la mejor alternativa simple |
+| SHAP identifica causas del proceso | Solo ~52 % del top-10 se mantiene al reentrenar | Se retira la afirmación; los alias se marcan como hipotéticos |
+| KNN es claramente mejor imputación | 0.094 vs 0.089 vs 0.088, dentro del ruido | Se declara empate práctico |
+Más casos en [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md).
 
 ## 1. Problema de negocio
 Un lote defectuoso que pasa sin detectarse cuesta mucho más que inspeccionar un lote bueno. Se usan estos costos (supuestos editables en `src/pqm/config.py` y en el dashboard; **no vienen de los datos**):
@@ -41,6 +63,8 @@ SHAP TreeExplainer global y por lote; la API devuelve los factores principales d
 
 ![SHAP](docs/img/dashboard_sensores.png)
 
+![Decisión por lote](docs/img/dashboard_decision.png)
+
 ## 4. Mantenimiento predictivo: NASA C-MAPSS (FD001 y FD002)
 RUL con tope de 125 ciclos, características de ventana deslizante (valor, media móvil y pendiente de degradación de 10 ciclos, solo con pasado), normalización por régimen operativo (KMeans, 6 regímenes en FD002), LightGBM, validación agrupada por motor, y evaluación en el **conjunto de prueba oficial** (último ciclo de cada motor frente al archivo RUL).
 
@@ -74,7 +98,7 @@ data/raw → pqm.data → SensorCleaner (fit solo en train: constantes, >50 % Na
 ## 6. Cómo ejecutarlo
 ```bash
 pip install -r requirements-dev.txt
-make test        # 18 pruebas
+make test        # 19 pruebas
 make train       # ~2 min: entrena, evalúa, escribe models/ y reports/ (MLflow en mlflow.db)
 make rul         # módulo C-MAPSS (~1 min)
 make api         # http://localhost:8000/docs

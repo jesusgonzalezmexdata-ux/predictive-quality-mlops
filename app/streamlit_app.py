@@ -44,9 +44,56 @@ with st.sidebar:
 
 mon = monetizar(h.y.values, h.p.values, umbral, costos)
 a = mon["ahorro_vs_mejor_baseline"]
-t1, t2, t3, t4 = st.tabs(["Impacto económico", "Qué sensores importan", "Deriva", "Honestidad estadística"])
+t0, t1, t2, t3, t4 = st.tabs(["Qué hacer con cada lote", "Impacto económico", "Qué sensores importan", "Deriva", "Honestidad estadística"])
+
+def wilson(k, n, z=1.96):
+    if n == 0:
+        return 0.0, 1.0
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    r = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return max(0.0, c - r), min(1.0, c + r)
+
+
+with t0:
+    st.caption("Regla de decisión por lote. Cada acción lleva su referencia al sistema de gestión (ISO 9001:2015).")
+    hh = h.reset_index(drop=True)
+    i = st.selectbox("Lote del holdout", hh.index[::-1], format_func=lambda k: f"{hh.timestamp[k]:%d-%b %H:%M} · riesgo {hh.p[k]:.1%}")
+    pr = hh.p[i]
+    vec = hh.assign(d=(hh.p - pr).abs()).nsmallest(40, "d")  # 40 lotes con puntaje más parecido
+    lo_, hi_ = wilson(int(vec.y.sum()), len(vec))
+    if pr >= umbral:
+        color, estado, accion = "🔴", "ALTO RIESGO", ("Retener el lote, inspección al 100 % y registrarlo como posible salida no conforme "
+                                                       "(ISO 9001 · 8.7 Control de salidas no conformes).")
+    elif pr >= umbral / 2:
+        color, estado, accion = "🟡", "VIGILAR", "Muestreo reforzado y registro del resultado para el seguimiento del desempeño (ISO 9001 · 9.1.3)."
+    else:
+        color, estado, accion = "🟢", "NORMAL", "Liberar con el flujo habitual."
+    st.subheader(f"{color} {estado}")
+    st.write(f"**Acción requerida:** {accion}")
+    c1, c2 = st.columns(2)
+    c1.metric("Puntaje del modelo", f"{pr:.1%}", f"umbral de alarma {umbral:.1%}", delta_color="off")
+    c2.metric("Tasa observada de falla en lotes con puntaje parecido", f"{vec.y.mean():.0%}",
+              f"IC95 % {lo_:.0%}–{hi_:.0%} (n={len(vec)})", delta_color="off")
+    st.caption("El puntaje no es una probabilidad calibrada: por eso se muestra, junto a él, qué fracción de lotes con puntaje similar falló "
+               "realmente y su intervalo (Wilson). Con pocas fallas el intervalo es amplio y debe leerse como tal.")
+    st.markdown("##### Reglas a nivel proceso")
+    d_ = m["deriva"]
+    pct = d_["sensores_con_deriva"] / d_["total"]
+    st.write(f"{'🔴' if pct > 0.2 else '🟢'} **Deriva de sensores:** {pct:.0%} con PSI>0.25. " +
+             ("**Acción requerida:** reentrenar el modelo y revisar calibración de instrumentos (ISO 9001 · 7.1.5 Recursos de seguimiento y medición)."
+              if pct > 0.2 else "Sin acción."))
+    tm_ = pd.Series(m["tasa_falla_mensual"])
+    mx = tm_.idxmax()
+    st.write(f"{'🔴' if tm_.max() > 2 * m['prevalencia'] else '🟢'} **Tasa de falla mensual máxima:** {tm_.max():.1%} ({mx}). " +
+             ("**Acción requerida:** análisis de causa raíz y acción correctiva (ISO 9001 · 10.2 No conformidad y acción correctiva)."
+              if tm_.max() > 2 * m["prevalencia"] else "Sin acción."))
+    st.caption("Los umbrales de estas reglas (20 % de sensores, 2× la tasa media) son criterios de ejemplo a validar con ingeniería de calidad.")
 
 with t1:
+    st.caption("Datos trazables para auditoría: ISO 9001 · 8.7 (salidas no conformes) y 9.1.3 (análisis y evaluación). "
+               "El costo de la no calidad (COPQ) incluye scrap no detectado, inspección y retrabajo.")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Ahorro vs mejor alternativa simple", f"${a:,.0f}", f"{a / mon['costo_mejor_baseline']:+.1%}")
     c2.metric("Fallas detectadas", f"{mon['detectadas']} de {mon['fallas']}")

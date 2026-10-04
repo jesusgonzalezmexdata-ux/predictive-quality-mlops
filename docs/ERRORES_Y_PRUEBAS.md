@@ -11,4 +11,4 @@
 | Ventanas de C-MAPSS podían filtrar el futuro | Prueba `test_ventanas_no_usan_el_futuro` altera el futuro y verifica que el pasado no cambia |
 | Plazo fijo como baseline de mantenimiento | Se elige mirando el test (favorece al baseline); aun así el modelo cuesta menos |
 
-Pruebas: 18 (`pytest`): datos, split cronológico, folds, limpieza sin fuga, costos, umbral, PSI, API (6) y RUL (5).
+Pruebas: 19 (`pytest`): datos, split cronológico, folds, limpieza sin fuga, costos, umbral, PSI, API (6) y RUL (5) y dashboard (1).

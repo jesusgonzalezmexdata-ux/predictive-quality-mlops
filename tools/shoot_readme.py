@@ -13,7 +13,8 @@ with sync_playwright() as p:
     pg.get_by_role("tab", name=tab).click()
     pg.wait_for_timeout(6000)
     blk = pg.locator("[data-testid='stMainBlockContainer']").bounding_box()
-    chart = pg.locator("[data-testid='stPlotlyChart'] >> visible=true").last.bounding_box()
+    charts = pg.locator("[data-testid='stPlotlyChart'] >> visible=true")
+    chart = charts.last.bounding_box() if charts.count() else {"y": blk["y"] + blk["height"] - 10, "height": 0}
     top = pg.locator("h1").first.bounding_box()["y"] - 20
     pg.screenshot(path=out, clip={"x": blk["x"], "y": top, "width": blk["width"],
                                   "height": chart["y"] + chart["height"] + 10 - top})

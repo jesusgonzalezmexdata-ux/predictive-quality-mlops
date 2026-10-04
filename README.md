@@ -105,7 +105,7 @@ make api         # http://localhost:8000/docs
 make dashboard   # http://localhost:8501
 docker compose up --build
 ```
-Nota: la imagen Docker **no se construyó en el entorno de desarrollo** (sin daemon); se valida en el CI.
+Nota: la imagen Docker no se construyó en el entorno de desarrollo (sin daemon); el CI de GitHub la construye y hace una prueba de humo de `/health` en cada push (verde).
 
 ## 7. Limitaciones y decisiones
 - Pocas fallas en el holdout (17): cualquier cifra económica tiene incertidumbre amplia.

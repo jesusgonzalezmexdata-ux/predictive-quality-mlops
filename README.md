@@ -28,6 +28,72 @@ El umbral sale de minimizar costo, no de maximizar F1; la banda intermedia exist
 | KNN es claramente mejor imputación | 0.094 vs 0.089 vs 0.088, dentro del ruido | Se declara empate práctico |
 Más casos en [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md).
 
+## Decisiones de diseño
+Cinco preguntas críticas de un sistema de calidad en producción, respondidas con la evidencia de este repositorio (incluye lo que no salió bien). Cifras reproducibles con `make train` y `make evidence`.
+
+### 1. ¿Cómo garantizo que la validación no filtra información del futuro?
+**Decisión.** Partición cronológica: entrenamiento = primeros 1 254 lotes (19-jul a 2-oct de 2008); holdout = últimos 313, evaluado **una sola vez**. Dentro del entrenamiento, ventanas expansivas (4 pliegues: se entrena con todo lo anterior y se prueba en el bloque siguiente). La limpieza de sensores (constantes, colinealidad, imputación KNN) y el umbral se ajustan **solo con el pasado de cada pliegue**.
+
+**Evidencia.** El proceso no es estacionario: la tasa de falla pasó de 22 % en julio a 3 % en septiembre. Con partición aleatoria el mismo modelo "mejora" a PR-AUC 0.154 frente a 0.09 con la temporal: la diferencia es fuga.
+
+![tasa por mes](reports/figures/distribucion_temporal.png)
+![fuga](reports/figures/fuga_vs_temporal.png)
+
+**Límites.** Cada fila de SECOM es un lote distinto, así que agrupar por lote (GroupKFold) no añade protección aquí; sí lo haría con varias mediciones por lote (en C-MAPSS se agrupa por motor). No hay "embargo" entre entrenamiento y validación.
+
+### 2. ¿Qué cuesta un falso negativo frente a un falso positivo y cómo lo incorporo?
+**Decisión.** Sin SMOTE (altera la distribución física de los sensores): `scale_pos_weight` = 13.4 (negativos/positivos del entrenamiento). El umbral se elige **minimizando el costo esperado** con predicciones fuera de muestra del entrenamiento, no maximizando F1. Costos supuestos: scrap no detectado 5 000, inspección 250, retrabajo 500 MXN. Una falla detectada ahorra 4 250 MXN netos, o sea **paga 17 falsas alarmas**.
+
+**Evidencia.** Curva de costo del holdout contra el umbral y sensibilidad a la razón de costos.
+
+![costo vs umbral](reports/figures/costo_vs_umbral.png)
+![sensibilidad](reports/figures/sensibilidad_costos.png)
+
+**Lo que sale mal.** El umbral elegido de antemano (0.106) cuesta 77 750 MXN en el holdout; con conocimiento del futuro el mejor umbral habría costado 66 000. Esa brecha es el precio de elegir sin ver el futuro y muestra que con 17 fallas el umbral es inestable. Además, a razones de costo scrap/inspección de 5, 10 y 80 el modelo pierde frente a la mejor alternativa simple.
+
+### 3. ¿Cómo detecto que el modelo se degrada sin etiquetas?
+**Decisión.** Dos señales que no necesitan ground truth, expuestas en `GET /drift` y alimentadas por el registro SQLite de cada predicción: (a) **PSI > 0.2 en más de 3 de los 10 sensores críticos** (top SHAP) y (b) **KS entre la distribución de puntajes de referencia y la reciente (p < 0.05)**. Alerta = reentrenar.
+
+**Evidencia (prueba de estrés sobre el holdout).**
+
+| Perturbación | PR-AUC | ¿Alerta? |
+|---|---|---|
+| Sin cambio | 0.089 | no |
+| Ruido gaussiano 5 % / 10 % / 25 % de σ | 0.100 / 0.104 / 0.084 | no / no / no |
+| Ruido 50 % de σ | 0.075 | **sí** (7 críticos con PSI>0.2) |
+| Ruido 100 % de σ | 0.064 | **sí** |
+| 5 sensores críticos desplazados ≥ 0.5 σ | ~0.10 | **sí** (KS p < 1e-19) |
+
+![estrés](reports/figures/estres.png)
+
+**Lo que aprendí.** Con solo 60 lotes recientes el PSI dio una falsa alarma (4 críticos) sobre datos sin cambio: el PSI tiene sesgo de muestra pequeña. Por eso `/drift` exige al menos 100 predicciones. También: el PR-AUC con 17 fallas es ruidoso y no cae de forma monótona (sube con corrimientos pequeños), así que **la alerta de deriva no prueba degradación, solo avisa que el modelo opera fuera de lo que vio**; sobre el holdout real ya hay deriva en 142 de 273 sensores.
+
+### 4. ¿Cuánto ahorra cada punto de recall?
+**Decisión.** Tratar el recall como una decisión de costo, no de métrica. Con la prevalencia observada (5.4 %) hay ~54 fallas por cada 1 000 lotes: **cada punto de recall evita ~2 308 MXN brutos por 1 000 lotes**, siempre que no agregue más de ~9 falsas alarmas por punto.
+
+**Evidencia (holdout, mejor costo posible por nivel de recall):**
+
+| Fallas detectadas (recall) | Falsas alarmas | Costo MXN |
+|---|---|---|
+| 0 (0 %) | 0 | 85 000 |
+| 5 (29 %) | 37 | 73 000 |
+| 7 (41 %) | 69 | 72 500 |
+| 9 (53 %) | 104 | 72 750 |
+| 11 (65 %) | 111 | 66 000 |
+| 12 (71 %) | 169 | 76 250 |
+| 17 (100 %) | 266 | 79 250 |
+
+**Lectura honesta.** El valor del recall **no es lineal**: tras 11 detecciones, una más exige 58 falsas alarmas adicionales (14 500 MXN) para evitar 4 250. Subir el recall "a 90 %" no ahorra por sí solo; depende de cuántas falsas alarmas cuesta. Estas cifras usan costos supuestos y 17 fallas.
+
+### 5. ¿Qué hace el operador cuando el modelo alerta y cómo reduzco su carga cognitiva?
+**Decisión.** La pantalla muestra solo **3 KPIs** (riesgo actual con semáforo, tendencia de 20 lotes y acción recomendada con su cláusula ISO 9001) y **3 factores** SHAP en lenguaje de planta, con una sugerencia de verificación. La API devuelve el mismo diagnóstico por lote (`factores`).
+
+![decisión](docs/img/dashboard_decision.png)
+
+**Lo que encontré.** El lote de mayor riesgo del holdout (76 %) está dominado por un sensor con valor a +111 σ, probablemente un error de medición. Por eso el dashboard agrega una **guarda de calidad de dato**: si un factor principal pasa de 10 σ, pide verificar la lectura antes de retener el lote.
+
+**Límites.** Los nombres y las sugerencias de verificación se derivan de alias hipotéticos; no se probó con operadores reales. Plan de adopción propuesto (no ejecutado): 30 días en modo sombra, comparar alertas contra la decisión del operador, sesión de 30 minutos centrada en "qué hacer con la alerta".
+
 ## 1. Problema de negocio
 Un lote defectuoso que pasa sin detectarse cuesta mucho más que inspeccionar un lote bueno. Se usan estos costos (supuestos editables en `src/pqm/config.py` y en el dashboard; **no vienen de los datos**):
 
@@ -98,9 +164,10 @@ data/raw → pqm.data → SensorCleaner (fit solo en train: constantes, >50 % Na
 ## 6. Cómo ejecutarlo
 ```bash
 pip install -r requirements-dev.txt
-make test        # 19 pruebas
+make test        # 20 pruebas
 make train       # ~2 min: entrena, evalúa, escribe models/ y reports/ (MLflow en mlflow.db)
 make rul         # módulo C-MAPSS (~1 min)
+make evidence    # costo vs umbral, estrés y explicaciones del holdout (~30 s)
 make api         # http://localhost:8000/docs
 make dashboard   # http://localhost:8501
 docker compose up --build

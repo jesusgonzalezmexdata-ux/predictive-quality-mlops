@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from pqm.config import CostosCalidad  # noqa: E402
 from pqm.evaluation import monetizar  # noqa: E402
-from pqm.explain import cargar_alias, nombre  # noqa: E402
+import numpy as np  # noqa: E402
+from pqm.explain import accion_sugerida, cargar_alias, nombre  # noqa: E402
 
 st.set_page_config(page_title="Calidad predictiva SECOM", layout="wide")
 
@@ -39,7 +40,7 @@ with st.sidebar:
     insp = st.number_input("Inspección de un lote marcado", 10, 5000, 250, 50)
     retr = st.number_input("Retrabajo de una falla detectada", 0, 20000, 500, 100)
     costos = CostosCalidad(scrap, insp, retr)
-    umbral = st.slider("Umbral de alarma (prob.)", 0.01, 0.60, float(round(m["umbral"], 3)), 0.001, format="%.3f",
+    umbral = st.slider("Umbral de alarma (puntaje)", 0.01, 0.60, float(round(m["umbral"], 3)), 0.001, format="%.3f",
                        help="Valor óptimo en validación temporal previa; moverlo muestra el compromiso.")
 
 mon = monetizar(h.y.values, h.p.values, umbral, costos)
@@ -59,10 +60,10 @@ def wilson(k, n, z=1.96):
 with t0:
     st.caption("Regla de decisión por lote. Cada acción lleva su referencia al sistema de gestión (ISO 9001:2015).")
     hh = h.reset_index(drop=True)
-    i = st.selectbox("Lote del holdout", hh.index[::-1], format_func=lambda k: f"{hh.timestamp[k]:%d-%b %H:%M} · riesgo {hh.p[k]:.1%}")
+    orden = list(hh.index[::-1])
+    i = st.selectbox("Lote del holdout (por defecto, el de mayor riesgo)", orden, index=orden.index(int(hh.p.idxmax())), format_func=lambda k: f"{hh.timestamp[k]:%d-%b %H:%M} · riesgo {hh.p[k]:.1%}")
     pr = hh.p[i]
     vec = hh.assign(d=(hh.p - pr).abs()).nsmallest(40, "d")  # 40 lotes con puntaje más parecido
-    lo_, hi_ = wilson(int(vec.y.sum()), len(vec))
     if pr >= umbral:
         color, estado, accion = "🔴", "ALTO RIESGO", ("Retener el lote, inspección al 100 % y registrarlo como posible salida no conforme "
                                                        "(ISO 9001 · 8.7 Control de salidas no conformes).")
@@ -70,14 +71,31 @@ with t0:
         color, estado, accion = "🟡", "VIGILAR", "Muestreo reforzado y registro del resultado para el seguimiento del desempeño (ISO 9001 · 9.1.3)."
     else:
         color, estado, accion = "🟢", "NORMAL", "Liberar con el flujo habitual."
-    st.subheader(f"{color} {estado}")
-    st.write(f"**Acción requerida:** {accion}")
-    c1, c2 = st.columns(2)
-    c1.metric("Puntaje del modelo", f"{pr:.1%}", f"umbral de alarma {umbral:.1%}", delta_color="off")
-    c2.metric("Tasa observada de falla en lotes con puntaje parecido", f"{vec.y.mean():.0%}",
-              f"IC95 % {lo_:.0%}–{hi_:.0%} (n={len(vec)})", delta_color="off")
-    st.caption("El puntaje no es una probabilidad calibrada: por eso se muestra, junto a él, qué fracción de lotes con puntaje similar falló "
-               "realmente y su intervalo (Wilson). Con pocas fallas el intervalo es amplio y debe leerse como tal.")
+    previo = hh.p[max(0, i - 40):max(0, i - 20)]
+    reciente = hh.p[max(0, i - 19):i + 1]
+    tend = (reciente.mean() - previo.mean()) if len(previo) else 0.0
+    k1, k2, k3 = st.columns([1, 1, 2])
+    k1.metric("1 · Riesgo actual", f"{pr:.1%}", f"{color} {estado}", delta_color="off")
+    k2.metric("2 · Tendencia (20 lotes)", f"{reciente.mean():.1%}", f"{tend * 100:+.1f} pp vs 20 previos", delta_color="inverse")
+    k3.markdown(f"**3 · Acción recomendada**\n\n{accion}")
+    ex = np.load(ROOT / "reports/holdout_explain.npz", allow_pickle=True)
+    cols_ = list(ex["cols"])
+    sv_, z_ = ex["sv"][i], ex["z"][i]
+    top = np.argsort(-np.abs(sv_))[:3]
+    st.markdown("**Por qué (3 factores principales)**")
+    for j in top:
+        nom = nombre(cols_[j], alias)
+        sug = accion_sugerida(nom)
+        st.write(f"- {'↑ sube' if sv_[j] > 0 else '↓ baja'} el riesgo: **{nom}** (`{cols_[j]}`), valor estandarizado {z_[j]:+.2f}"
+                 + (f" → *verificar: {sug}* (sugerencia hipotética)" if sug and sv_[j] > 0 else ""))
+    if any(abs(z_[j]) > 10 for j in top):
+        st.warning("⚠️ Calidad del dato: un factor principal tiene un valor a más de 10 desviaciones estándar. Antes de retener el lote, "
+                   "verifique la lectura del sensor (posible error de medición o sensor casi constante). ISO 9001 · 7.1.5.")
+    st.caption("Los valores estandarizados y las sugerencias dependen de alias ilustrativos; con el diccionario real de tags se sustituyen. "
+               "Se muestran solo 3 KPIs y 3 factores para no sobrecargar al operador.")
+    lo_, hi_ = wilson(int(vec.y.sum()), len(vec))
+    st.info(f"Incertidumbre: entre los 40 lotes con puntaje más parecido, {vec.y.mean():.0%} falló realmente "
+            f"(IC95 % {lo_:.0%}–{hi_:.0%}). El puntaje no es una probabilidad calibrada; con pocas fallas el intervalo es amplio.")
     st.markdown("##### Reglas a nivel proceso")
     d_ = m["deriva"]
     pct = d_["sensores_con_deriva"] / d_["total"]

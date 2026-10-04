@@ -874,5 +874,17 @@
   "retrabajo_detectado": 500.0
  },
  "entrenado_con": 1567,
- "prevalencia": 0.06636885768985322
+ "prevalencia": 0.06636885768985322,
+ "sensores_criticos": [
+  "f59",
+  "f460",
+  "f33",
+  "f197",
+  "f247",
+  "f10",
+  "f19",
+  "f0",
+  "f31",
+  "f130"
+ ]
 }

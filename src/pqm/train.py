@@ -134,7 +134,8 @@ def main() -> dict:
     MODELS.mkdir(exist_ok=True)
     joblib.dump(final, MODELS / "model.joblib", compress=3)
     meta = {"version": "1.0.0", "imputer": mejor, "umbral": umbral_final, "features": list(Zf.columns),
-            "todas_las_features": list(X.columns), "costos": costos.__dict__, "entrenado_con": len(X), "prevalencia": float(y.mean())}
+            "todas_las_features": list(X.columns), "costos": costos.__dict__, "entrenado_con": len(X), "prevalencia": float(y.mean()),
+            "sensores_criticos": list(glob.sensor[:10])}
     (MODELS / "metadata.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
     # muestra de referencia (datos de entrenamiento ya transformados) para vigilar deriva en producción
     Zf.sample(min(len(Zf), 600), random_state=SEED).to_csv(MODELS / "referencia.csv", index=False)

@@ -57,8 +57,20 @@ def test_drift_detecta_corrimiento_fuerte(client):
     c, _ = client
     X, _, _t = load_secom()
     meta = json.loads((__import__("pathlib").Path(os.environ.get("PQM_MODEL_DIR", "models")) / "metadata.json").read_text()) if False else None
-    for i in range(40):
+    for i in range(110):
         fila = {k: (None if v != v else float(v) * 5 + 100) for k, v in X.iloc[i].items()}
         assert c.post("/predict", json={"lote_id": f"d{i}", "sensores": fila}).status_code == 200
     d = c.get("/drift").json()
     assert d["estado"] == "ok" and d["con_deriva"] > 50
+    assert d["alerta_reentrenar"] and d["motivos"]
+
+
+def test_drift_sin_corrimiento_no_alerta(client):
+    c, _ = client
+    X, _, _t = load_secom()
+    # lotes tomados de forma intercalada a lo largo de todo el periodo: misma distribución que la referencia
+    for i in range(0, 1500, 12):
+        fila = {k: (None if v != v else float(v)) for k, v in X.iloc[i].items()}
+        assert c.post("/predict", json={"lote_id": f"n{i}", "sensores": fila}).status_code == 200
+    d = c.get("/drift").json()
+    assert d["estado"] == "ok" and d["ks_puntajes"]["p"] > 0.05 and d["criticos_con_psi_mayor_0.2"] <= 3

@@ -46,3 +46,15 @@ def explicar_lote(sv_fila: pd.Series, valores: pd.Series, alias: dict[str, str],
     top = sv_fila.abs().sort_values(ascending=False).head(k).index
     return [{"sensor": s, "nombre": nombre(s, alias), "valor": None if pd.isna(valores[s]) else float(valores[s]),
              "aporte": float(sv_fila[s])} for s in top]
+
+
+_ACCIONES = [("Presion", "verificar sellos/fugas y calibración del transmisor de presión"),
+             ("Temperatura", "verificar la calibración del termopar y el control de la zona"),
+             ("Potencia", "revisar suministro RF y conexiones del electrodo"), ("Voltaje", "revisar suministro y conexiones del electrodo"),
+             ("Corriente", "revisar el accionamiento del motor"), ("Flujo", "verificar el controlador de flujo másico"),
+             ("Humedad", "revisar el acondicionamiento de la sala limpia"), ("Vibracion", "inspeccionar rodamientos de la bomba")]
+
+
+def accion_sugerida(nombre_sensor: str) -> str | None:
+    """Sugerencia de verificación según la familia del alias. Es HIPOTÉTICA: depende del diccionario real de tags."""
+    return next((a for k, a in _ACCIONES if nombre_sensor.startswith(k)), None)

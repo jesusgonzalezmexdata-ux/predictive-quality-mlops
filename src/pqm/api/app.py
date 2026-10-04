@@ -12,6 +12,8 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from scipy.stats import ks_2samp
+
 from pqm import drift, explain
 from pqm.config import MODELS
 
@@ -106,18 +108,27 @@ def historial(limite: int = 50) -> list[dict]:
 
 
 @app.get("/drift")
-def drift_reciente(ultimas: int = 200, minimo: int = 30) -> dict:
+def drift_reciente(ultimas: int = 200, minimo: int = 100) -> dict:
     """PSI por sensor entre la muestra de entrenamiento y las últimas lecturas recibidas.
     Con menos de `minimo` predicciones no se calcula (el PSI no es confiable con muestras chicas)."""
     _cargar()
     with _db() as con:
-        filas = con.execute("SELECT lecturas FROM predicciones ORDER BY id DESC LIMIT ?", (ultimas,)).fetchall()
+        filas = con.execute("SELECT lecturas, probabilidad FROM predicciones ORDER BY id DESC LIMIT ?", (ultimas,)).fetchall()
     if len(filas) < minimo:
         return {"estado": "datos_insuficientes", "predicciones": len(filas), "minimo": minimo}
     nuevo = pd.DataFrame([json.loads(f[0]) for f in filas])
     ref = _state["ref"]
     cols = [c for c in ref.columns if c in nuevo.columns]
     t = drift.psi_table(ref, nuevo, cols)
+    # Sin etiquetas: (a) PSI de sensores críticos y (b) KS entre la distribución de puntajes de referencia y la reciente
+    criticos = [c for c in _state["meta"].get("sensores_criticos", []) if c in nuevo.columns]
+    n_crit = int(t[t.sensor.isin(criticos)].psi.gt(0.2).sum())
+    if "ref_scores" not in _state:
+        _state["ref_scores"] = _state["model"][-1].predict_proba(_state["ref"])[:, 1]
+    ks = ks_2samp(_state["ref_scores"], [f[1] for f in filas])
+    motivos = (["PSI>0.2 en más de 3 sensores críticos"] if n_crit > 3 else []) + (["cambió la distribución de puntajes (KS p<0.05)"] if ks.pvalue < 0.05 else [])
     return {"estado": "ok", "predicciones": len(filas), "sensores_comparados": len(cols),
             "con_deriva": int((t.psi > 0.25).sum()), "vigilar": int(((t.psi > 0.1) & (t.psi <= 0.25)).sum()),
+            "criticos_con_psi_mayor_0.2": n_crit, "ks_puntajes": {"estadistico": round(float(ks.statistic), 3), "p": float(ks.pvalue)},
+            "alerta_reentrenar": bool(motivos), "motivos": motivos,
             "top": t.head(10).assign(psi=lambda d: d.psi.round(3)).to_dict("records")}

@@ -1,0 +1,257 @@
+{
+ "n_lotes": 1567,
+ "fallas": 104,
+ "prevalencia": 0.06636885768985322,
+ "periodo": [
+  "2008-07-19 11:55:00",
+  "2008-10-17 06:07:00"
+ ],
+ "n_train": 1254,
+ "n_holdout": 313,
+ "fallas_holdout": 17,
+ "prevalencia_holdout": 0.054313099041533544,
+ "comparacion_imputacion": {
+  "none": {
+   "pr_auc": 0.08828682670529979,
+   "roc_auc": 0.613448275862069,
+   "lift10": 2.1514285714285712,
+   "pr_auc_ic95": [
+    0.04269707462215777,
+    0.19662159052198594
+   ],
+   "prevalencia": 0.03718459495351926
+  },
+  "median": {
+   "pr_auc": 0.08925559626428851,
+   "roc_auc": 0.6228571428571428,
+   "lift10": 1.7928571428571427,
+   "pr_auc_ic95": [
+    0.044077112068645806,
+    0.19645219112615478
+   ],
+   "prevalencia": 0.03718459495351926
+  },
+  "knn": {
+   "pr_auc": 0.09420647206221447,
+   "roc_auc": 0.6230049261083743,
+   "lift10": 1.7928571428571427,
+   "pr_auc_ic95": [
+    0.04307505701528147,
+    0.21369153795255885
+   ],
+   "prevalencia": 0.03718459495351926
+  }
+ },
+ "imputacion_elegida": "knn",
+ "validacion_aleatoria": {
+  "pr_auc": 0.15397624675891247,
+  "roc_auc": 0.7259502211190891
+ },
+ "umbral": 0.10597019414220092,
+ "holdout": {
+  "pr_auc": 0.08911271278011773,
+  "pr_auc_ic95": [
+   0.04349585880211066,
+   0.1966269777781692
+  ],
+  "roc_auc": 0.6210254372019078,
+  "lift10": 2.375711574952562,
+  "lotes": 313,
+  "fallas": 17,
+  "marcados": 61,
+  "detectadas": 5,
+  "no_detectadas": 12,
+  "falsas_alarmas": 56,
+  "costo_con_modelo": 77750.0,
+  "costo_sin_modelo": 85000.0,
+  "costo_inspeccionar_todo": 86750.0,
+  "costo_mejor_baseline": 85000.0,
+  "ahorro_vs_sin_modelo": 7250.0,
+  "ahorro_vs_mejor_baseline": 7250.0,
+  "ahorro_vs_inspeccionar_todo": 9000.0,
+  "sensores_usados": 273,
+  "sensores_colineales_eliminados": 171,
+  "ahorro_ic95": [
+   -22031.25,
+   19768.74999999998
+  ],
+  "prob_ahorro_positivo": 0.547
+ },
+ "sensibilidad_costos": [
+  {
+   "razon_scrap_inspeccion": 5,
+   "umbral": 0.3102439144425811,
+   "ahorro": -1500.0,
+   "ahorro_pct": -0.07058823529411765
+  },
+  {
+   "razon_scrap_inspeccion": 10,
+   "umbral": 0.22992355960941638,
+   "ahorro": -1750.0,
+   "ahorro_pct": -0.041176470588235294
+  },
+  {
+   "razon_scrap_inspeccion": 20,
+   "umbral": 0.10597019414220092,
+   "ahorro": 7250.0,
+   "ahorro_pct": 0.08529411764705883
+  },
+  {
+   "razon_scrap_inspeccion": 40,
+   "umbral": 0.01195726368507556,
+   "ahorro": 2750.0,
+   "ahorro_pct": 0.03170028818443804
+  },
+  {
+   "razon_scrap_inspeccion": 80,
+   "umbral": 0.01195726368507556,
+   "ahorro": -7250.0,
+   "ahorro_pct": -0.08357348703170028
+  }
+ ],
+ "shap_top": [
+  {
+   "sensor": "f59",
+   "shap_medio_abs": 0.48485514518717027,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  },
+  {
+   "sensor": "f460",
+   "shap_medio_abs": 0.27450098682984814,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  },
+  {
+   "sensor": "f33",
+   "shap_medio_abs": 0.27158933036930466,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  },
+  {
+   "sensor": "f197",
+   "shap_medio_abs": 0.16724423406446187,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  },
+  {
+   "sensor": "f247",
+   "shap_medio_abs": 0.14904635854713408,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  },
+  {
+   "sensor": "f10",
+   "shap_medio_abs": 0.13333134645246975,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  },
+  {
+   "sensor": "f19",
+   "shap_medio_abs": 0.13143538933101512,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  },
+  {
+   "sensor": "f0",
+   "shap_medio_abs": 0.12572168043649182,
+   "direccion": "\u2193 valor alto baja el riesgo"
+  },
+  {
+   "sensor": "f31",
+   "shap_medio_abs": 0.12372224029743496,
+   "direccion": "\u2193 valor alto baja el riesgo"
+  },
+  {
+   "sensor": "f130",
+   "shap_medio_abs": 0.11992821005846689,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  },
+  {
+   "sensor": "f485",
+   "shap_medio_abs": 0.11579115792655587,
+   "direccion": "\u2193 valor alto baja el riesgo"
+  },
+  {
+   "sensor": "f91",
+   "shap_medio_abs": 0.11478450890077582,
+   "direccion": "\u2193 valor alto baja el riesgo"
+  },
+  {
+   "sensor": "f172",
+   "shap_medio_abs": 0.10764298911828803,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  },
+  {
+   "sensor": "f182",
+   "shap_medio_abs": 0.1052173488004292,
+   "direccion": "\u2193 valor alto baja el riesgo"
+  },
+  {
+   "sensor": "f21",
+   "shap_medio_abs": 0.10321412349218977,
+   "direccion": "\u2191 valor alto sube el riesgo"
+  }
+ ],
+ "estabilidad_shap_top10": {
+  "solape_medio": 0.52,
+  "min": 0.4,
+  "max": 0.7
+ },
+ "deriva": {
+  "sensores_con_deriva": 142,
+  "sensores_vigilar": 76,
+  "total": 273,
+  "top": [
+   {
+    "sensor": "f116",
+    "psi": 3.6110304257408425,
+    "estado": "deriva"
+   },
+   {
+    "sensor": "f132",
+    "psi": 3.444949825598955,
+    "estado": "deriva"
+   },
+   {
+    "sensor": "f487",
+    "psi": 3.1413099310586503,
+    "estado": "deriva"
+   },
+   {
+    "sensor": "f542",
+    "psi": 2.8409838772951215,
+    "estado": "deriva"
+   },
+   {
+    "sensor": "f80",
+    "psi": 2.484741385970148,
+    "estado": "deriva"
+   },
+   {
+    "sensor": "f58",
+    "psi": 2.188420914981914,
+    "estado": "deriva"
+   },
+   {
+    "sensor": "f40",
+    "psi": 2.1503331914653905,
+    "estado": "deriva"
+   },
+   {
+    "sensor": "f72",
+    "psi": 2.1453936932090825,
+    "estado": "deriva"
+   },
+   {
+    "sensor": "f122",
+    "psi": 1.9976302642162476,
+    "estado": "deriva"
+   },
+   {
+    "sensor": "f544",
+    "psi": 1.9938328797883753,
+    "estado": "deriva"
+   }
+  ]
+ },
+ "tasa_falla_mensual": {
+  "2008-07": 0.2222,
+  "2008-08": 0.0919,
+  "2008-09": 0.0288,
+  "2008-10": 0.0613
+ }
+}

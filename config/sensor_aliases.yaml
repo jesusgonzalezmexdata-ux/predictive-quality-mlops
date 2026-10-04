@@ -1,0 +1,15 @@
+# ALIAS ILUSTRATIVOS. SECOM no publica qué mide cada sensor (las columnas son anónimas).
+# Estos nombres son hipotéticos: sirven para demostrar cómo se traducirían los sensores a lenguaje de
+# planta cuando el ingeniero de proceso entregue el diccionario real. NO son una afirmación física.
+# Para uso real, reemplazar con el diccionario de tags de la planta.
+alias:
+  f59: Presion_camara_vacio_2
+  f460: Temperatura_zona_horno_2
+  f33: Flujo_gas_proceso_A
+  f197: Potencia_RF_electrodo
+  f247: Voltaje_electrodo_superior
+  f10: Humedad_sala_limpia
+  f19: Vibracion_bomba_vacio
+  f0: Corriente_motor_transferencia
+  f31: Presion_linea_nitrogeno
+  f130: Temperatura_agua_enfriamiento

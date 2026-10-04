@@ -1,0 +1,6 @@
+data
+mlruns
+mlflow.db
+tests
+.git
+__pycache__

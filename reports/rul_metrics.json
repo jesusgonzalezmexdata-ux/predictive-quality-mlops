@@ -1,0 +1,82 @@
+{
+ "FD001": {
+  "fd": "FD001",
+  "regimenes": 1,
+  "motores_train": 100,
+  "motores_test": 100,
+  "rmse_cv_agrupado": 15.9325795637107,
+  "rmse_test": 17.22161193742812,
+  "rmse_test_sin_tope": 18.360055639259475,
+  "score_nasa": 690.7646762531671,
+  "clasificador": {
+   "horizonte": 30,
+   "pr_auc_cv": 0.9630269804520031,
+   "prevalencia_cv": 0.15025931850128446,
+   "pr_auc_test": 0.931388058597031,
+   "positivos_test": 25
+  },
+  "mantenimiento": {
+   "margen_elegido_cv": 50,
+   "costo_cv_por_margen": {
+    "0": 52.85895421185485,
+    "5": 42.77112414838325,
+    "10": 36.632908410845246,
+    "15": 32.68102166429832,
+    "20": 29.212507571047478,
+    "25": 26.6659659791964,
+    "30": 24.912172312740097,
+    "35": 23.493349134197747,
+    "40": 22.57470300942378,
+    "45": 22.18215037997203,
+    "50": 22.166734348351326,
+    "55": 22.410898292751007,
+    "60": 22.750774935788247
+   },
+   "costo_correr_hasta_fallar": 10000.0,
+   "costo_con_modelo": 2095.4512487440184,
+   "costo_mejor_plazo_fijo_oraculo": 2346.24,
+   "ahorro_vs_correr_hasta_fallar": 7904.548751255981,
+   "fallas_no_evitadas": 1
+  }
+ },
+ "FD002": {
+  "fd": "FD002",
+  "regimenes": 6,
+  "motores_train": 260,
+  "motores_test": 259,
+  "rmse_cv_agrupado": 16.125520443685907,
+  "rmse_test": 14.478888014956667,
+  "rmse_test_sin_tope": 26.718374825324876,
+  "score_nasa": 948.8898814222421,
+  "clasificador": {
+   "horizonte": 30,
+   "pr_auc_cv": 0.9570200540934424,
+   "prevalencia_cv": 0.14992838408452538,
+   "pr_auc_test": 0.9815356119282159,
+   "positivos_test": 61
+  },
+  "mantenimiento": {
+   "margen_elegido_cv": 50,
+   "costo_cv_por_margen": {
+    "0": 54.72866742200202,
+    "5": 44.57602258999742,
+    "10": 37.613363570428774,
+    "15": 32.910058246811055,
+    "20": 29.44240923277109,
+    "25": 26.69680908873457,
+    "30": 24.78746917371374,
+    "35": 23.45035663909707,
+    "40": 22.716265786084737,
+    "45": 22.34282248489952,
+    "50": 22.199319307872987,
+    "55": 22.421358411394394,
+    "60": 22.77181899424413
+   },
+   "costo_correr_hasta_fallar": 25900.0,
+   "costo_con_modelo": 5394.324557451689,
+   "costo_mejor_plazo_fijo_oraculo": 6252.84,
+   "ahorro_vs_correr_hasta_fallar": 20505.675442548312,
+   "fallas_no_evitadas": 0
+  }
+ }
+}

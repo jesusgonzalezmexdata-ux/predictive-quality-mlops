@@ -3,7 +3,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import shap
 import yaml
 
 from pqm.config import ROOT
@@ -23,6 +22,8 @@ def nombre(sensor: str, alias: dict[str, str]) -> str:
 
 def shap_values(pipe, X: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, float]:
     """Devuelve (valores SHAP, datos transformados, valor base) en escala logit para la clase 'falla'."""
+    import shap  # importación diferida: el dashboard no necesita SHAP para leer resultados ya calculados
+
     Z = pipe[0].transform(X)
     ex = shap.TreeExplainer(pipe[-1])
     sv = ex.shap_values(Z)

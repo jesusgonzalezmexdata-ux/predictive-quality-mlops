@@ -45,4 +45,3 @@ flowchart LR
 | `timestamp` | Fecha del lote (19-jul a 17-oct 2008); define el orden de validación |
 | `p` | Puntaje del modelo (LightGBM con `scale_pos_weight`; **no calibrado**) |
 | Costos | Supuestos editables, no provienen de los datos |
-C-MAPSS: `motor, ciclo, op1-3, s1..s21`; RUL = ciclos hasta la falla (tope 125 en entrenamiento).

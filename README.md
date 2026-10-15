@@ -2,12 +2,12 @@
 
 *English · [Español](README.es.md)*
 
-**An end-to-end decision-support system for industrial quality:** it predicts which semiconductor lots (SECOM) are at risk of failing, translates the result into pesos saved or spent, serves it as an API and a dashboard, and watches its own degradation. It includes a predictive-maintenance module (NASA C-MAPSS) with remaining useful life (RUL) and preventive vs corrective cost.
+**An end-to-end decision-support system for industrial quality:** it predicts which semiconductor lots (SECOM) are at risk of failing, translates the result into pesos saved or spent, serves it as an API and a dashboard, and watches its own degradation. Predictive maintenance on NASA C-MAPSS lives in its own repository: [predictive-maintenance-survival-cmapss](https://github.com/jesusgonzalezmexdata-ux/predictive-maintenance-survival-cmapss).
 
 ## Executive summary
 The system turns data from 590 sensors into a **decision per lot** (release, monitor, hold) with its action and its ISO 9001 reference, measures the effect on **cost of poor quality (COPQ)** and warns when the model stops being reliable. The differentiator is not the algorithm: it is the **decision taxonomy**, the **visible uncertainty** and the **scrutiny log** of what failed and was corrected.
 
-> **What this project shows, and what it does not.** SECOM has a real but weak signal: the model ranks lots better than chance, but the economic saving is **not statistically demonstrated** (95 % CI of the saving: −22k to +20k MXN on 313 lots). It is reported that way on purpose. C-MAPSS does show a clear benefit. The contribution is the method, leakage-free validation and the engineering, not an inflated figure.
+> **What this project shows, and what it does not.** SECOM has a real but weak signal: the model ranks lots better than chance, but the economic saving is **not statistically demonstrated** (95 % CI of the saving: −22k to +20k MXN on 313 lots). It is reported that way on purpose. The contribution is the method, leakage-free validation and the engineering, not an inflated figure.
 
 ![Dashboard](docs/img/dashboard_impacto.png)
 
@@ -42,7 +42,7 @@ Five critical questions for a quality system in production, answered with the ev
 ![rate by month](reports/figures/distribucion_temporal.png)
 ![leakage](reports/figures/fuga_vs_temporal.png)
 
-**Limits.** Each SECOM row is a different lot, so grouping by lot (GroupKFold) adds no protection here; it would with several measurements per lot (C-MAPSS groups by engine). There is no "embargo" between training and validation.
+**Limits.** Each SECOM row is a different lot, so grouping by lot (GroupKFold) adds no protection here; it would with several measurements per lot (the C-MAPSS repository groups by engine). There is no "embargo" between training and validation.
 
 ### 2. What does a false negative cost against a false positive, and how is that built in?
 **Decision.** No SMOTE (it alters the physical distribution of the sensors): `scale_pos_weight` = 13.4 (training negatives/positives). The threshold is chosen by **minimising expected cost** on out-of-sample training predictions, not by maximising F1. Assumed costs: undetected scrap 5,000, inspection 250, rework 500 MXN. A detected failure saves 4,250 MXN net, so it **pays for 17 false alarms**.
@@ -134,42 +134,22 @@ Global and per-lot SHAP TreeExplainer; the API returns each prediction's main fa
 
 ![Decision per lot](docs/img/dashboard_decision.png)
 
-## 4. Predictive maintenance: NASA C-MAPSS (FD001 and FD002)
-RUL capped at 125 cycles, sliding-window features (value, rolling mean and 10-cycle degradation slope, past only), normalisation by operating regime (KMeans, 6 regimes in FD002), LightGBM, validation grouped by engine, and evaluation on the **official test set** (last cycle of each engine against the RUL file).
-
-| | FD001 (1 regime) | FD002 (6 regimes) |
-|---|---|---|
-| Test RMSE (capped RUL) | 17.2 | 14.5 |
-| NASA score | 691 | 949 |
-| P(failure within 30 cycles): test PR-AUC | 0.93 | 0.98 |
-| Cost of run-to-failure | 10,000 | 25,900 |
-| Cost with a model-guided policy | 2,095 | 5,394 |
-| Best common fixed interval (chosen looking at the test set) | 2,346 | 6,253 |
-| Failures not avoided | 1 of 100 | 0 of 259 |
-
-Policy: replace when the prediction says `margin` cycles remain; the margin (50) is chosen only on out-of-sample training predictions. Assumed costs: corrective 100, preventive 15, 0.12 per wasted cycle of life.
-
-**Limits:** no Weibull or Random Survival Forest here; the failure probability comes from a classifier on RUL ≤ 30 (not formally calibrated). RMSE is computed against RUL capped at 125 (uncapped: 18.4 and 26.7). Costs are assumptions. FD003/FD004 were not covered. The dedicated survival-analysis study, with condition-based policies and confidence intervals, is in [predictive-maintenance-survival-cmapss](https://github.com/jesusgonzalezmexdata-ux/predictive-maintenance-survival-cmapss).
-
-![RUL](reports/figures/rul_test.png)
-
-## 5. Architecture
+## 4. Architecture
 ```
 data/raw → pqm.data → SensorCleaner (fit on train only: constants, >50 % NaN, imputation, |r|>0.95)
         → LightGBM (scale_pos_weight, no SMOTE) → cost-based threshold (temporal OOF)
         → models/ + reports/ (MLflow sqlite) ─┬─ FastAPI  /predict /predicciones /drift /health /model-info
                                               └─ Streamlit (plant manager)
 ```
-- `src/pqm/`: `data`, `features`, `models`, `evaluation`, `drift`, `explain`, `train`, `api/`, `rul/`.
+- `src/pqm/`: `data`, `features`, `models`, `evaluation`, `drift`, `explain`, `train`, `api/`.
 - Every prediction is logged in SQLite (`predicciones`); `/drift` computes PSI against a reference sample using what was actually received.
 - CI (GitHub Actions): pytest + `docker build` + an API smoke test in the container.
 
-## 6. How to run it
+## 5. How to run it
 ```bash
 pip install -r requirements-dev.txt
-make test        # 20 tests
+make test        # 15 tests
 make train       # ~2 min: trains, evaluates, writes models/ and reports/ (MLflow in mlflow.db)
-make rul         # C-MAPSS module (~1 min)
 make evidence    # cost vs threshold, stress and holdout explanations (~30 s)
 make api         # http://localhost:8000/docs
 make dashboard   # http://localhost:8501
@@ -177,17 +157,17 @@ docker compose up --build
 ```
 Note: the Docker image was not built in the development environment (no daemon); GitHub CI builds it and smoke-tests `/health` on every push.
 
-## 7. Limitations and decisions
+## 6. Limitations and decisions
 - Few failures in the holdout (17): any economic figure has wide uncertainty.
 - Illustrative costs; with real costs the threshold and the saving change (see sensitivity).
 - MLflow for experiments; **DVC was not used**: the public data are versioned in the repository.
 - The deployment model is retrained on all lots; its future performance is not measured here.
 
-Data: [UCI SECOM](https://archive.ics.uci.edu/dataset/179/secom) and [NASA C-MAPSS](https://data.nasa.gov/dataset/c-mapss-aircraft-engine-simulator-data), public and cited from their sources. Stress tests and corrected errors: [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md) (Spanish). Model Card: [MODEL_CARD.md](MODEL_CARD.md).
+Data: [UCI SECOM](https://archive.ics.uci.edu/dataset/179/secom), public and cited from its source. Stress tests and corrected errors: [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md) (Spanish). Model Card: [MODEL_CARD.md](MODEL_CARD.md).
 
 ## License
 
-Code under [MIT](LICENSE). SECOM and NASA C-MAPSS data keep their source terms.
+Code under [MIT](LICENSE). SECOM data keep their source terms.
 
 ---
 

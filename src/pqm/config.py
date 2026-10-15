@@ -4,7 +4,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 RAW_SECOM = ROOT / "data/raw/secom"
-RAW_CMAPSS = ROOT / "data/raw/cmapss"
 MODELS = ROOT / "models"
 FIGURES = ROOT / "reports/figures"
 SEED = 42

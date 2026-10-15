@@ -181,3 +181,7 @@ Nota: la imagen Docker no se construyó en el entorno de desarrollo (sin daemon)
 - Modelo de despliegue reentrenado con todos los lotes; su desempeño futuro no se mide aquí.
 
 Datos: [UCI SECOM](https://archive.ics.uci.edu/dataset/179/secom) y [NASA C-MAPSS](https://data.nasa.gov/dataset/c-mapss-aircraft-engine-simulator-data), públicos, citados por sus fuentes. Detalle de pruebas de estrés y errores corregidos: [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md).
+
+## Licencia
+
+Código bajo [MIT](LICENSE). Los datos SECOM y NASA C-MAPSS conservan los términos de sus fuentes.

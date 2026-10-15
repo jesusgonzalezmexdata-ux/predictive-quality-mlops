@@ -1,187 +1,194 @@
 # Predictive Quality · MLOps
 
-**Sistema de soporte a decisiones de calidad industrial, de punta a punta:** predice qué lotes de semiconductores (SECOM) tienen riesgo de falla, traduce el resultado a pesos ahorrados o gastados, lo expone como API y dashboard, y vigila su propia degradación. Incluye un módulo de mantenimiento predictivo (NASA C-MAPSS) con vida útil restante (RUL) y costo preventivo vs. correctivo.
+*English · [Español](README.es.md)*
 
-## Resumen ejecutivo
-Este sistema convierte datos de 590 sensores en una **decisión por lote** (liberar, vigilar, retener) con su acción y su referencia ISO 9001, mide el efecto en **costo de la no calidad (COPQ)** y avisa cuándo el modelo deja de ser confiable. El diferenciador no es el algoritmo: es la **taxonomía de decisión**, la **incertidumbre visible** y el **log de escrutinio** de lo que falló y se corrigió.
+**An end-to-end decision-support system for industrial quality:** it predicts which semiconductor lots (SECOM) are at risk of failing, translates the result into pesos saved or spent, serves it as an API and a dashboard, and watches its own degradation. It includes a predictive-maintenance module (NASA C-MAPSS) with remaining useful life (RUL) and preventive vs corrective cost.
 
-> **Lo que este proyecto demuestra, y lo que no.** Con SECOM hay señal real pero débil: el modelo ordena los lotes mejor que el azar, pero el ahorro económico **no está estadísticamente demostrado** (IC95 % del ahorro: −22 k a +20 k MXN en 313 lotes). Se reporta así a propósito. Con C-MAPSS sí hay un beneficio claro. La contribución es el método, la validación sin fuga de información y la ingeniería, no una cifra inflada.
+## Executive summary
+The system turns data from 590 sensors into a **decision per lot** (release, monitor, hold) with its action and its ISO 9001 reference, measures the effect on **cost of poor quality (COPQ)** and warns when the model stops being reliable. The differentiator is not the algorithm: it is the **decision taxonomy**, the **visible uncertainty** and the **scrutiny log** of what failed and was corrected.
+
+> **What this project shows, and what it does not.** SECOM has a real but weak signal: the model ranks lots better than chance, but the economic saving is **not statistically demonstrated** (95 % CI of the saving: −22k to +20k MXN on 313 lots). It is reported that way on purpose. C-MAPSS does show a clear benefit. The contribution is the method, leakage-free validation and the engineering, not an inflated figure.
 
 ![Dashboard](docs/img/dashboard_impacto.png)
 
-## Taxonomía de decisión (ventaja competitiva)
+## Decision taxonomy
 ```mermaid
 flowchart LR
-  L[Lote] --> Q{Puntaje}
-  Q -->|alto| R[ALTO RIESGO: retener + 100 % · ISO 8.7]
-  Q -->|medio| A[VIGILAR: muestreo reforzado · ISO 9.1.3]
-  Q -->|bajo| V[NORMAL: liberar]
+  L[Lot] --> Q{Score}
+  Q -->|high| R[HIGH RISK: hold + 100 % inspection · ISO 8.7]
+  Q -->|medium| A[MONITOR: tightened sampling · ISO 9.1.3]
+  Q -->|low| V[NORMAL: release]
 ```
-El umbral sale de minimizar costo, no de maximizar F1; la banda intermedia existe porque el modelo es débil. Reglas de proceso: deriva en >20 % de sensores → reentrenar y revisar instrumentos (7.1.5); tasa mensual >2× la media → causa raíz (10.2). Detalle, familias de sensores y diccionario: [`docs/TAXONOMIA.md`](docs/TAXONOMIA.md). El dashboard muestra cada lote con su semáforo, la acción requerida y la tasa observada de falla en lotes parecidos con su intervalo (el puntaje **no** es una probabilidad calibrada).
+The threshold comes from minimising cost, not maximising F1; the middle band exists because the model is weak. Process rules: drift in >20 % of sensors → retrain and check instruments (7.1.5); monthly failure rate >2× the mean → root cause (10.2). Details, sensor families and dictionary: [`docs/TAXONOMIA.md`](docs/TAXONOMIA.md) (Spanish). The dashboard shows each lot with its traffic light, the required action and the observed failure rate of similar lots with its interval (the score is **not** a calibrated probability).
 
-## Desafíos y validación (log de escrutinio)
-| Hipótesis inicial | Refutación | Corrección |
+## Challenges and validation (scrutiny log)
+| Initial hypothesis | Refutation | Correction |
 |---|---|---|
-| El split aleatorio sirve para evaluar | PR-AUC 0.154 aleatorio vs 0.09 temporal: filtra lotes futuros | Ventanas expansivas + holdout cronológico único |
-| El modelo ahorra dinero | IC95 % del ahorro incluye cero; negativo con razones de costo 5, 10 y 80 | Se publica la incertidumbre y la sensibilidad; se compara con la mejor alternativa simple |
-| SHAP identifica causas del proceso | Solo ~52 % del top-10 se mantiene al reentrenar | Se retira la afirmación; los alias se marcan como hipotéticos |
-| KNN es claramente mejor imputación | 0.094 vs 0.089 vs 0.088, dentro del ruido | Se declara empate práctico |
-Más casos en [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md).
+| A random split is fine for evaluation | PR-AUC 0.154 random vs 0.09 temporal: future lots leak in | Expanding windows + a single chronological holdout |
+| The model saves money | The 95 % CI of the saving includes zero; negative at cost ratios 5, 10 and 80 | Uncertainty and sensitivity are published; comparison with the best simple alternative |
+| SHAP identifies process causes | Only ~52 % of the top 10 survives retraining | Claim withdrawn; aliases marked as hypothetical |
+| KNN is clearly the better imputation | 0.094 vs 0.089 vs 0.088, within noise | Declared a practical tie |
 
-## Decisiones de diseño
-Cinco preguntas críticas de un sistema de calidad en producción, respondidas con la evidencia de este repositorio (incluye lo que no salió bien). Cifras reproducibles con `make train` y `make evidence`.
+More cases in [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md) (Spanish).
 
-### 1. ¿Cómo garantizo que la validación no filtra información del futuro?
-**Decisión.** Partición cronológica: entrenamiento = primeros 1 254 lotes (19-jul a 2-oct de 2008); holdout = últimos 313, evaluado **una sola vez**. Dentro del entrenamiento, ventanas expansivas (4 pliegues: se entrena con todo lo anterior y se prueba en el bloque siguiente). La limpieza de sensores (constantes, colinealidad, imputación KNN) y el umbral se ajustan **solo con el pasado de cada pliegue**.
+## Design decisions
+Five critical questions for a quality system in production, answered with the evidence in this repository (including what did not go well). Figures reproducible with `make train` and `make evidence`.
 
-**Evidencia.** El proceso no es estacionario: la tasa de falla pasó de 22 % en julio a 3 % en septiembre. Con partición aleatoria el mismo modelo "mejora" a PR-AUC 0.154 frente a 0.09 con la temporal: la diferencia es fuga.
+### 1. How do I make sure validation does not leak information from the future?
+**Decision.** Chronological split: training = first 1,254 lots (19 Jul to 2 Oct 2008); holdout = last 313, evaluated **once**. Inside training, expanding windows (4 folds: train on everything before, test on the next block). Sensor cleaning (constants, collinearity, KNN imputation) and the threshold are fitted **only on each fold's past**.
 
-![tasa por mes](reports/figures/distribucion_temporal.png)
-![fuga](reports/figures/fuga_vs_temporal.png)
+**Evidence.** The process is not stationary: the failure rate went from 22 % in July to 3 % in September. With a random split the same model "improves" to PR-AUC 0.154 against 0.09 with the temporal one: the difference is leakage.
 
-**Límites.** Cada fila de SECOM es un lote distinto, así que agrupar por lote (GroupKFold) no añade protección aquí; sí lo haría con varias mediciones por lote (en C-MAPSS se agrupa por motor). No hay "embargo" entre entrenamiento y validación.
+![rate by month](reports/figures/distribucion_temporal.png)
+![leakage](reports/figures/fuga_vs_temporal.png)
 
-### 2. ¿Qué cuesta un falso negativo frente a un falso positivo y cómo lo incorporo?
-**Decisión.** Sin SMOTE (altera la distribución física de los sensores): `scale_pos_weight` = 13.4 (negativos/positivos del entrenamiento). El umbral se elige **minimizando el costo esperado** con predicciones fuera de muestra del entrenamiento, no maximizando F1. Costos supuestos: scrap no detectado 5 000, inspección 250, retrabajo 500 MXN. Una falla detectada ahorra 4 250 MXN netos, o sea **paga 17 falsas alarmas**.
+**Limits.** Each SECOM row is a different lot, so grouping by lot (GroupKFold) adds no protection here; it would with several measurements per lot (C-MAPSS groups by engine). There is no "embargo" between training and validation.
 
-**Evidencia.** Curva de costo del holdout contra el umbral y sensibilidad a la razón de costos.
+### 2. What does a false negative cost against a false positive, and how is that built in?
+**Decision.** No SMOTE (it alters the physical distribution of the sensors): `scale_pos_weight` = 13.4 (training negatives/positives). The threshold is chosen by **minimising expected cost** on out-of-sample training predictions, not by maximising F1. Assumed costs: undetected scrap 5,000, inspection 250, rework 500 MXN. A detected failure saves 4,250 MXN net, so it **pays for 17 false alarms**.
 
-![costo vs umbral](reports/figures/costo_vs_umbral.png)
-![sensibilidad](reports/figures/sensibilidad_costos.png)
+**Evidence.** Holdout cost curve against the threshold and sensitivity to the cost ratio.
 
-**Lo que sale mal.** El umbral elegido de antemano (0.106) cuesta 77 750 MXN en el holdout; con conocimiento del futuro el mejor umbral habría costado 66 000. Esa brecha es el precio de elegir sin ver el futuro y muestra que con 17 fallas el umbral es inestable. Además, a razones de costo scrap/inspección de 5, 10 y 80 el modelo pierde frente a la mejor alternativa simple.
+![cost vs threshold](reports/figures/costo_vs_umbral.png)
+![sensitivity](reports/figures/sensibilidad_costos.png)
 
-### 3. ¿Cómo detecto que el modelo se degrada sin etiquetas?
-**Decisión.** Dos señales que no necesitan ground truth, expuestas en `GET /drift` y alimentadas por el registro SQLite de cada predicción: (a) **PSI > 0.2 en más de 3 de los 10 sensores críticos** (top SHAP) y (b) **KS entre la distribución de puntajes de referencia y la reciente (p < 0.05)**. Alerta = reentrenar.
+**What goes wrong.** The threshold chosen in advance (0.106) costs 77,750 MXN on the holdout; with knowledge of the future the best threshold would have cost 66,000. That gap is the price of choosing without seeing the future, and it shows that with 17 failures the threshold is unstable. At scrap/inspection cost ratios of 5, 10 and 80 the model also loses to the best simple alternative.
 
-**Evidencia (prueba de estrés sobre el holdout).**
+### 3. How do I detect degradation without labels?
+**Decision.** Two signals that need no ground truth, exposed at `GET /drift` and fed by the SQLite log of every prediction: (a) **PSI > 0.2 on more than 3 of the 10 critical sensors** (top SHAP) and (b) **KS between the reference and recent score distributions (p < 0.05)**. Alert = retrain.
 
-| Perturbación | PR-AUC | ¿Alerta? |
+**Evidence (stress test on the holdout).**
+
+| Perturbation | PR-AUC | Alert? |
 |---|---|---|
-| Sin cambio | 0.089 | no |
-| Ruido gaussiano 5 % / 10 % / 25 % de σ | 0.100 / 0.104 / 0.084 | no / no / no |
-| Ruido 50 % de σ | 0.075 | **sí** (7 críticos con PSI>0.2) |
-| Ruido 100 % de σ | 0.064 | **sí** |
-| 5 sensores críticos desplazados ≥ 0.5 σ | ~0.10 | **sí** (KS p < 1e-19) |
+| No change | 0.089 | no |
+| Gaussian noise 5 % / 10 % / 25 % of σ | 0.100 / 0.104 / 0.084 | no / no / no |
+| Noise 50 % of σ | 0.075 | **yes** (7 critical sensors with PSI > 0.2) |
+| Noise 100 % of σ | 0.064 | **yes** |
+| 5 critical sensors shifted ≥ 0.5 σ | ~0.10 | **yes** (KS p < 1e-19) |
 
-![estrés](reports/figures/estres.png)
+![stress](reports/figures/estres.png)
 
-**Lo que aprendí.** Con solo 60 lotes recientes el PSI dio una falsa alarma (4 críticos) sobre datos sin cambio: el PSI tiene sesgo de muestra pequeña. Por eso `/drift` exige al menos 100 predicciones. También: el PR-AUC con 17 fallas es ruidoso y no cae de forma monótona (sube con corrimientos pequeños), así que **la alerta de deriva no prueba degradación, solo avisa que el modelo opera fuera de lo que vio**; sobre el holdout real ya hay deriva en 142 de 273 sensores.
+**What I learned.** With only 60 recent lots, PSI raised a false alarm (4 critical sensors) on unchanged data: PSI has a small-sample bias. That is why `/drift` requires at least 100 predictions. Also, PR-AUC with 17 failures is noisy and does not fall monotonically (it rises with small shifts), so **a drift alert does not prove degradation; it only warns that the model is operating outside what it saw**. On the real holdout there is already drift in 142 of 273 sensors.
 
-### 4. ¿Cuánto ahorra cada punto de recall?
-**Decisión.** Tratar el recall como una decisión de costo, no de métrica. Con la prevalencia observada (5.4 %) hay ~54 fallas por cada 1 000 lotes: **cada punto de recall evita ~2 308 MXN brutos por 1 000 lotes**, siempre que no agregue más de ~9 falsas alarmas por punto.
+### 4. How much is each point of recall worth?
+**Decision.** Treat recall as a cost decision, not a metric. At the observed prevalence (5.4 %) there are ~54 failures per 1,000 lots: **each point of recall avoids ~2,308 MXN gross per 1,000 lots**, as long as it does not add more than ~9 false alarms per point.
 
-**Evidencia (holdout, mejor costo posible por nivel de recall):**
+**Evidence (holdout, best possible cost per recall level):**
 
-| Fallas detectadas (recall) | Falsas alarmas | Costo MXN |
+| Failures detected (recall) | False alarms | Cost MXN |
 |---|---|---|
-| 0 (0 %) | 0 | 85 000 |
-| 5 (29 %) | 37 | 73 000 |
-| 7 (41 %) | 69 | 72 500 |
-| 9 (53 %) | 104 | 72 750 |
-| 11 (65 %) | 111 | 66 000 |
-| 12 (71 %) | 169 | 76 250 |
-| 17 (100 %) | 266 | 79 250 |
+| 0 (0 %) | 0 | 85,000 |
+| 5 (29 %) | 37 | 73,000 |
+| 7 (41 %) | 69 | 72,500 |
+| 9 (53 %) | 104 | 72,750 |
+| 11 (65 %) | 111 | 66,000 |
+| 12 (71 %) | 169 | 76,250 |
+| 17 (100 %) | 266 | 79,250 |
 
-**Lectura honesta.** El valor del recall **no es lineal**: tras 11 detecciones, una más exige 58 falsas alarmas adicionales (14 500 MXN) para evitar 4 250. Subir el recall "a 90 %" no ahorra por sí solo; depende de cuántas falsas alarmas cuesta. Estas cifras usan costos supuestos y 17 fallas.
+**Honest reading.** The value of recall is **not linear**: after 11 detections, one more requires 58 additional false alarms (14,500 MXN) to avoid 4,250. Raising recall "to 90 %" does not save money by itself; it depends on how many false alarms it costs. These figures use assumed costs and 17 failures.
 
-### 5. ¿Qué hace el operador cuando el modelo alerta y cómo reduzco su carga cognitiva?
-**Decisión.** La pantalla muestra solo **3 KPIs** (riesgo actual con semáforo, tendencia de 20 lotes y acción recomendada con su cláusula ISO 9001) y **3 factores** SHAP en lenguaje de planta, con una sugerencia de verificación. La API devuelve el mismo diagnóstico por lote (`factores`).
+### 5. What does the operator do when the model alerts, and how is cognitive load kept low?
+**Decision.** The screen shows only **3 KPIs** (current risk with a traffic light, 20-lot trend and recommended action with its ISO 9001 clause) and **3 SHAP factors** in plant language, with a verification suggestion. The API returns the same diagnosis per lot (`factores`).
 
-![decisión](docs/img/dashboard_decision.png)
+![decision](docs/img/dashboard_decision.png)
 
-**Lo que encontré.** El lote de mayor riesgo del holdout (76 %) está dominado por un sensor con valor a +111 σ, probablemente un error de medición. Por eso el dashboard agrega una **guarda de calidad de dato**: si un factor principal pasa de 10 σ, pide verificar la lectura antes de retener el lote.
+**What I found.** The highest-risk holdout lot (76 %) is dominated by a sensor at +111 σ, probably a measurement error. That is why the dashboard adds a **data-quality guard**: if a main factor exceeds 10 σ, it asks to verify the reading before holding the lot.
 
-**Límites.** Los nombres y las sugerencias de verificación se derivan de alias hipotéticos; no se probó con operadores reales. Plan de adopción propuesto (no ejecutado): 30 días en modo sombra, comparar alertas contra la decisión del operador, sesión de 30 minutos centrada en "qué hacer con la alerta".
+**Limits.** Names and verification suggestions come from hypothetical aliases; it was not tested with real operators. Proposed adoption plan (not executed): 30 days in shadow mode, compare alerts with the operator's decision, a 30-minute session focused on "what to do with the alert".
 
-## 1. Problema de negocio
-Un lote defectuoso que pasa sin detectarse cuesta mucho más que inspeccionar un lote bueno. Se usan estos costos (supuestos editables en `src/pqm/config.py` y en el dashboard; **no vienen de los datos**):
+## 1. Business problem
+A defective lot that passes undetected costs much more than inspecting a good lot. These costs are used (editable assumptions in `src/pqm/config.py` and in the dashboard; **they do not come from the data**):
 
-| Evento | Costo MXN |
+| Event | Cost MXN |
 |---|---|
-| Scrap no detectado | 5,000 |
-| Inspección de un lote marcado | 250 |
-| Retrabajo de una falla detectada | 500 |
+| Undetected scrap | 5,000 |
+| Inspection of a flagged lot | 250 |
+| Rework of a detected failure | 500 |
 
-Se mide el éxito como **costo de la no calidad evitado frente a la mejor alternativa simple** (no hacer nada o inspeccionar todo), no con accuracy ni F1.
+Success is measured as **cost of poor quality avoided against the best simple alternative** (do nothing or inspect everything), not with accuracy or F1.
 
-## 2. Resultados reales (SECOM, holdout cronológico)
-1 567 lotes, 590 sensores, 104 fallas (6.6 %), jul–oct 2008. Entrenamiento: primeros 80 % del tiempo; holdout: último 20 % (313 lotes, 17 fallas), evaluado una sola vez.
+## 2. Results (SECOM, chronological holdout)
+1,567 lots, 590 sensors, 104 failures (6.6 %), Jul–Oct 2008. Training: first 80 % of the time; holdout: last 20 % (313 lots, 17 failures), evaluated once.
 
-| Métrica | Valor |
+| Metric | Value |
 |---|---|
-| PR-AUC holdout | **0.089** (IC95 % 0.043–0.197), prevalencia 0.054 |
-| ROC-AUC holdout | 0.62 |
-| Lift en el 10 % de mayor riesgo | 2.4× |
-| Fallas detectadas / falsas alarmas | 5 de 17 / 56 |
-| Ahorro vs. mejor alternativa simple | 7 250 MXN (+8.5 %), IC95 % −22 031 a +19 769; P(ahorro>0) = 55 % |
+| Holdout PR-AUC | **0.089** (95 % CI 0.043–0.197), prevalence 0.054 |
+| Holdout ROC-AUC | 0.62 |
+| Lift in the top 10 % risk | 2.4× |
+| Failures detected / false alarms | 5 of 17 / 56 |
+| Saving vs best simple alternative | 7,250 MXN (+8.5 %), 95 % CI −22,031 to +19,769; P(saving > 0) = 55 % |
 
-**Hallazgos que importan**
-- **El split aleatorio infla el resultado.** Misma configuración: PR-AUC 0.154 con partición aleatoria vs. 0.09 con validación temporal (`reports/figures/fuga_vs_temporal.png`). La planta real es no estacionaria (la tasa de falla cambia por mes).
-- **El ahorro depende de la razón de costos.** Solo es positivo en una banda intermedia (scrap ≈ 20–40× el costo de inspección); a razones de 5, 10 y 80 el modelo pierde frente a la alternativa simple.
-- **Imputación:** KNN (0.094) ≈ mediana (0.089) ≈ sin imputar (0.088) en PR-AUC; las diferencias son menores que el intervalo de incertidumbre. Se usa KNN por criterio, no porque gane con claridad.
-- **Deriva fuerte:** 142 de 273 sensores con PSI > 0.25 entre entrenamiento y holdout. Hace falta reentrenar y monitorear.
+**Findings that matter**
+- **A random split inflates the result.** Same configuration: PR-AUC 0.154 with a random split vs 0.09 with temporal validation (`reports/figures/fuga_vs_temporal.png`). The real plant is non-stationary (the failure rate changes by month).
+- **The saving depends on the cost ratio.** It is positive only in a middle band (scrap ≈ 20–40× the inspection cost); at ratios of 5, 10 and 80 the model loses to the simple alternative.
+- **Imputation:** KNN (0.094) ≈ median (0.089) ≈ no imputation (0.088) in PR-AUC; the differences are smaller than the uncertainty interval. KNN is used by judgement, not because it clearly wins.
+- **Strong drift:** 142 of 273 sensors with PSI > 0.25 between training and holdout. Retraining and monitoring are needed.
 
-## 3. Explicabilidad (SHAP) y su límite
-SHAP TreeExplainer global y por lote; la API devuelve los factores principales de cada predicción con dirección. `config/sensor_aliases.yaml` traduce algunos sensores a nombres de planta (p. ej. `f59 → Presion_camara_vacio_2`).
+## 3. Explainability (SHAP) and its limit
+Global and per-lot SHAP TreeExplainer; the API returns each prediction's main factors with their direction. `config/sensor_aliases.yaml` maps some sensors to plant names (e.g. `f59 → Presion_camara_vacio_2`).
 
-> **Esos nombres son hipotéticos.** SECOM publica los sensores de forma anónima; los alias son ilustrativos y muestran cómo quedaría con el diccionario de tags real de una planta. **No se afirma que el modelo haya aprendido la física del proceso**: al reentrenar con 80 % de los datos, solo ~52 % del top-10 de SHAP se mantiene, así que el ranking es una pista a investigar con ingeniería, no una causa raíz.
+> **Those names are hypothetical.** SECOM publishes its sensors anonymously; the aliases are illustrative and show how it would look with a real plant's tag dictionary. **No claim is made that the model learned the process physics**: retraining on 80 % of the data keeps only ~52 % of the SHAP top 10, so the ranking is a lead for engineering to investigate, not a root cause.
 
 ![SHAP](docs/img/dashboard_sensores.png)
 
-![Decisión por lote](docs/img/dashboard_decision.png)
+![Decision per lot](docs/img/dashboard_decision.png)
 
-## 4. Mantenimiento predictivo: NASA C-MAPSS (FD001 y FD002)
-RUL con tope de 125 ciclos, características de ventana deslizante (valor, media móvil y pendiente de degradación de 10 ciclos, solo con pasado), normalización por régimen operativo (KMeans, 6 regímenes en FD002), LightGBM, validación agrupada por motor, y evaluación en el **conjunto de prueba oficial** (último ciclo de cada motor frente al archivo RUL).
+## 4. Predictive maintenance: NASA C-MAPSS (FD001 and FD002)
+RUL capped at 125 cycles, sliding-window features (value, rolling mean and 10-cycle degradation slope, past only), normalisation by operating regime (KMeans, 6 regimes in FD002), LightGBM, validation grouped by engine, and evaluation on the **official test set** (last cycle of each engine against the RUL file).
 
-| | FD001 (1 régimen) | FD002 (6 regímenes) |
+| | FD001 (1 regime) | FD002 (6 regimes) |
 |---|---|---|
-| RMSE test (RUL con tope) | 17.2 | 14.5 |
+| Test RMSE (capped RUL) | 17.2 | 14.5 |
 | NASA score | 691 | 949 |
-| P(falla en ≤30 ciclos): PR-AUC test | 0.93 | 0.98 |
-| Costo correr hasta fallar | 10 000 | 25 900 |
-| Costo con política guiada por modelo | 2 095 | 5 394 |
-| Mejor plazo fijo común (elegido mirando el test) | 2 346 | 6 253 |
-| Fallas no evitadas | 1 de 100 | 0 de 259 |
+| P(failure within 30 cycles): test PR-AUC | 0.93 | 0.98 |
+| Cost of run-to-failure | 10,000 | 25,900 |
+| Cost with a model-guided policy | 2,095 | 5,394 |
+| Best common fixed interval (chosen looking at the test set) | 2,346 | 6,253 |
+| Failures not avoided | 1 of 100 | 0 of 259 |
 
-Política: reemplazar cuando falten `margen` ciclos según la predicción; el margen (50) se elige solo con predicciones fuera de muestra del entrenamiento. Costos supuestos: correctivo 100, preventivo 15, 0.12 por ciclo de vida desperdiciado.
+Policy: replace when the prediction says `margin` cycles remain; the margin (50) is chosen only on out-of-sample training predictions. Assumed costs: corrective 100, preventive 15, 0.12 per wasted cycle of life.
 
-**Límites:** no se implementó Weibull ni Random Survival Forest; la probabilidad de falla viene de un clasificador sobre RUL ≤ 30 (sin calibrar formalmente). El RMSE se calcula contra la RUL con tope 125 (sin tope: 18.4 y 26.7). Los costos son supuestos. No se trabajó FD003/FD004 ni los datos de propulsión naval / hidráulicos.
+**Limits:** no Weibull or Random Survival Forest here; the failure probability comes from a classifier on RUL ≤ 30 (not formally calibrated). RMSE is computed against RUL capped at 125 (uncapped: 18.4 and 26.7). Costs are assumptions. FD003/FD004 were not covered. The dedicated survival-analysis study, with condition-based policies and confidence intervals, is in [predictive-maintenance-survival-cmapss](https://github.com/jesusgonzalezmexdata-ux/predictive-maintenance-survival-cmapss).
 
 ![RUL](reports/figures/rul_test.png)
 
-## 5. Arquitectura
+## 5. Architecture
 ```
-data/raw → pqm.data → SensorCleaner (fit solo en train: constantes, >50 % NaN, imputación, |r|>0.95)
-        → LightGBM (scale_pos_weight, sin SMOTE) → umbral por costo (OOF temporal)
+data/raw → pqm.data → SensorCleaner (fit on train only: constants, >50 % NaN, imputation, |r|>0.95)
+        → LightGBM (scale_pos_weight, no SMOTE) → cost-based threshold (temporal OOF)
         → models/ + reports/ (MLflow sqlite) ─┬─ FastAPI  /predict /predicciones /drift /health /model-info
-                                              └─ Streamlit (gerente de planta)
+                                              └─ Streamlit (plant manager)
 ```
 - `src/pqm/`: `data`, `features`, `models`, `evaluation`, `drift`, `explain`, `train`, `api/`, `rul/`.
-- Registro de cada predicción en SQLite (`predicciones`); `/drift` calcula PSI contra una muestra de referencia con lo realmente recibido.
-- CI (GitHub Actions): pytest + `docker build` + prueba de humo de la API en contenedor.
+- Every prediction is logged in SQLite (`predicciones`); `/drift` computes PSI against a reference sample using what was actually received.
+- CI (GitHub Actions): pytest + `docker build` + an API smoke test in the container.
 
-## 6. Cómo ejecutarlo
+## 6. How to run it
 ```bash
 pip install -r requirements-dev.txt
-make test        # 20 pruebas
-make train       # ~2 min: entrena, evalúa, escribe models/ y reports/ (MLflow en mlflow.db)
-make rul         # módulo C-MAPSS (~1 min)
-make evidence    # costo vs umbral, estrés y explicaciones del holdout (~30 s)
+make test        # 20 tests
+make train       # ~2 min: trains, evaluates, writes models/ and reports/ (MLflow in mlflow.db)
+make rul         # C-MAPSS module (~1 min)
+make evidence    # cost vs threshold, stress and holdout explanations (~30 s)
 make api         # http://localhost:8000/docs
 make dashboard   # http://localhost:8501
 docker compose up --build
 ```
-Nota: la imagen Docker no se construyó en el entorno de desarrollo (sin daemon); el CI de GitHub la construye y hace una prueba de humo de `/health` en cada push (verde).
+Note: the Docker image was not built in the development environment (no daemon); GitHub CI builds it and smoke-tests `/health` on every push.
 
-## 7. Limitaciones y decisiones
-- Pocas fallas en el holdout (17): cualquier cifra económica tiene incertidumbre amplia.
-- Costos ilustrativos; con costos reales el umbral y el ahorro cambian (ver sensibilidad).
-- MLflow para experimentos; **DVC no se usó**: los datos públicos están versionados en el repo.
-- Modelo de despliegue reentrenado con todos los lotes; su desempeño futuro no se mide aquí.
+## 7. Limitations and decisions
+- Few failures in the holdout (17): any economic figure has wide uncertainty.
+- Illustrative costs; with real costs the threshold and the saving change (see sensitivity).
+- MLflow for experiments; **DVC was not used**: the public data are versioned in the repository.
+- The deployment model is retrained on all lots; its future performance is not measured here.
 
-Datos: [UCI SECOM](https://archive.ics.uci.edu/dataset/179/secom) y [NASA C-MAPSS](https://data.nasa.gov/dataset/c-mapss-aircraft-engine-simulator-data), públicos, citados por sus fuentes. Detalle de pruebas de estrés y errores corregidos: [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md).
+Data: [UCI SECOM](https://archive.ics.uci.edu/dataset/179/secom) and [NASA C-MAPSS](https://data.nasa.gov/dataset/c-mapss-aircraft-engine-simulator-data), public and cited from their sources. Stress tests and corrected errors: [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md) (Spanish). Model Card: [MODEL_CARD.md](MODEL_CARD.md).
 
-## Licencia
+## License
 
-Código bajo [MIT](LICENSE). Los datos SECOM y NASA C-MAPSS conservan los términos de sus fuentes.
+Code under [MIT](LICENSE). SECOM and NASA C-MAPSS data keep their source terms.
+
+---
+
+**Jesús R. L. González** · Data Analyst and Data Scientist · Manufacturing operations and quality · [LinkedIn](https://www.linkedin.com/in/jesus-r-l-gonzalez)

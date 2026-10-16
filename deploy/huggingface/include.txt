@@ -1,5 +1,0 @@
-app
-src
-reports
-config
-docs/img

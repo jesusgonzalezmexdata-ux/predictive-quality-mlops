@@ -1,0 +1,23 @@
+{
+  "title": "Predictive quality on SECOM",
+  "emoji": "🔬",
+  "colorFrom": "indigo",
+  "colorTo": "gray",
+  "entrypoint": "app/streamlit_app.py",
+  "requirements": [
+    "plotly",
+    "scikit-learn",
+    "pyyaml"
+  ],
+  "include": [
+    "app/streamlit_app.py",
+    "src/pqm",
+    "reports",
+    "config",
+    "docs/img"
+  ],
+  "short_description": "Which semiconductor lots to hold, with honest uncertainty",
+  "summary": "Each lot's risk, the recommended action and the observed failure rate of similar lots; the saving is reported with its uncertainty.",
+  "repo": "predictive-quality-mlops",
+  "license": "mit"
+}

@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software or its evidence, please cite it as below."
+title: "Predictive quality on SECOM: cost-based lot decisions with honest uncertainty"
+type: software
+authors:
+  - family-names: "González"
+    given-names: "Jesús R. L."
+license: MIT
+version: "1.1.0"
+date-released: "2026-10-16"
+repository-code: "https://github.com/jesusgonzalezmexdata-ux/predictive-quality-mlops"
+url: "https://jesusgonzalezmexdata-ux.github.io/predictive-quality-mlops/"
+keywords:
+  - quality control
+  - mlops
+  - drift detection
+  - cost-sensitive decisions

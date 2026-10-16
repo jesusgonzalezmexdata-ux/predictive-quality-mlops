@@ -1,0 +1,4 @@
+MODEL_CARD.md
+reports/metrics.json
+reports/figures
+docs/ERRORES_Y_PRUEBAS.md

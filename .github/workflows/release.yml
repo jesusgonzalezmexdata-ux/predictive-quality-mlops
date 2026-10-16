@@ -1,0 +1,43 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)publish"
+        required: true
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: Release notes from CHANGELOG
+        run: |
+          python3 - <<'PY'
+          import os, re
+          tag = os.environ["TAG"].lstrip("v")
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(rf"^## \[{re.escape(tag)}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.S | re.M)
+          body = m.group(1).strip() if m else "See CHANGELOG.md."
+          open("notes.md", "w", encoding="utf-8").write(body + "\n")
+          open("title.txt", "w", encoding="utf-8").write(f"v{tag}")
+          PY
+      - name: Evidence bundle
+        run: |
+          mapfile -t paths < <(grep -v '^$' deploy/release-assets.txt)
+          zip -qr "evidence-${TAG}.zip" "${paths[@]}" CHANGELOG.md LICENSE
+      - name: Create or update the release
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "evidence-${TAG}.zip" --clobber
+          else
+            gh release create "$TAG" "evidence-${TAG}.zip" --title "$(cat title.txt)" --notes-file notes.md --verify-tag
+          fi

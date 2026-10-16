@@ -1,0 +1,49 @@
+name: Demo on Hugging Face
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hf-space
+  cancel-in-progress: true
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_SPACE: JesusRLGonzalez/predictive-quality-mlops
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Space bundle
+        run: |
+          mkdir _space
+          while IFS= read -r p; do
+            [ -z "$p" ] && continue
+            cp -r --parents "$p" _space/
+          done < deploy/huggingface/include.txt
+          cp deploy/huggingface/README.md deploy/huggingface/Dockerfile deploy/huggingface/requirements.txt _space/
+          du -sh _space
+      - name: Skip when the Hugging Face token is not configured
+        id: token
+        run: |
+          if [ -n "$HF_TOKEN" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else echo "::notice::Add the HF_TOKEN secret to publish the demo"; fi
+      - uses: actions/setup-python@v5
+        if: steps.token.outputs.ready == 'true'
+        with:
+          python-version: "3.12"
+      - name: Publish to the Space
+        if: steps.token.outputs.ready == 'true'
+        run: |
+          pip install -q "huggingface_hub>=0.34,<1"
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          space = os.environ["HF_SPACE"]
+          api.create_repo(space, repo_type="space", space_sdk="docker", exist_ok=True)
+          api.upload_folder(folder_path="_space", repo_id=space, repo_type="space", delete_patterns="*",
+                            commit_message=f"Sync from GitHub {os.environ['GITHUB_SHA'][:7]}")
+          print(f"https://huggingface.co/spaces/{space}")
+          PY

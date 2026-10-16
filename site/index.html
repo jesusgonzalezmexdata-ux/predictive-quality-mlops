@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Predictive quality on SECOM | Jesús R. L. González</title>
+<meta name="description" content="590 sensors per lot, a weak signal and a process that changes month to month. The system ranks lots by risk, sets the threshold by cost and reports the saving with its uncertainty.">
+<meta property="og:title" content="Which semiconductor lots should be held for inspection?">
+<meta property="og:description" content="Not proven economic saving: 95 % interval −22k to +20k MXN">
+<meta property="og:image" content="https://jesusgonzalezmexdata-ux.github.io/predictive-quality-mlops/figures/costo_vs_umbral.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF1F4;--surface:#FFFFFF;--ink:#18232E;--muted:#556372;--rule:#C9D2DB;--tag:#F2B705;--tag-ink:#2B2100;--signal:#0E6E68;--signal-ink:#FFFFFF}
+@media (prefers-color-scheme:dark){:root{--bg:#10171E;--surface:#18222C;--ink:#E7EDF3;--muted:#9AA8B6;--rule:#2A3744;--tag:#F2B705;--tag-ink:#2B2100;--signal:#4FB3A9;--signal-ink:#08201E}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Source Serif 4",Georgia,serif;font-size:1.0625rem;line-height:1.65}
+a{color:var(--signal);text-underline-offset:.18em}
+a:focus-visible,.btn:focus-visible{outline:3px solid var(--tag);outline-offset:3px;border-radius:4px}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1.25rem}
+header.top{padding:1.25rem 0;font-family:Archivo,system-ui,sans-serif;font-size:.95rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+header.top a{color:var(--ink);text-decoration:none}
+header.top a:hover{text-decoration:underline}
+.hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:3rem;align-items:center;padding:2.5rem 0 3rem}
+h1,h2{font-family:Archivo,system-ui,sans-serif;font-stretch:112%;line-height:1.12;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(2rem,4.4vw,3.2rem);font-weight:750;max-width:18ch}
+h2{font-size:1.45rem;font-weight:700;margin-bottom:1rem}
+.lead{font-size:1.2rem;color:var(--muted);max-width:56ch;margin:1.25rem 0 1.75rem}
+.actions{display:flex;flex-wrap:wrap;gap:.75rem}
+.btn{display:inline-block;font-family:Archivo,system-ui,sans-serif;font-weight:650;font-size:1rem;padding:.8rem 1.15rem;border-radius:6px;text-decoration:none;border:2px solid var(--signal)}
+.btn.primary{background:var(--signal);color:var(--signal-ink)}
+.btn.secondary{color:var(--signal);background:transparent}
+.tagbox{display:flex;justify-content:center}
+.tag{position:relative;width:min(19rem,100%);background:var(--tag);color:var(--tag-ink);padding:3.2rem 1.6rem 1.6rem;border-radius:10px 10px 18px 18px;transform:rotate(-2deg);transform-origin:50% 0;box-shadow:0 1px 0 rgba(0,0,0,.18),0 14px 28px -18px rgba(0,0,0,.55)}
+.tag::before{content:"";position:absolute;top:1.1rem;left:50%;width:1.15rem;height:1.15rem;margin-left:-.575rem;border-radius:50%;background:var(--bg);box-shadow:inset 0 1px 2px rgba(0,0,0,.35)}
+.tag::after{content:"";position:absolute;top:-2.6rem;left:50%;width:2px;height:3.4rem;background:var(--muted);transform:rotate(8deg);transform-origin:bottom}
+.tag .value{font-family:Archivo,system-ui,sans-serif;font-stretch:125%;font-weight:800;font-size:clamp(2.4rem,6vw,3.4rem);line-height:1;display:block}
+.tag .label{display:block;margin-top:.7rem;font-size:1.02rem;line-height:1.4}
+.tag .note{display:block;margin-top:1rem;padding-top:.75rem;border-top:1px dashed rgba(43,33,0,.45);font-size:.88rem}
+@media (prefers-reduced-motion:no-preference){.tag{animation:swing 1.6s cubic-bezier(.3,1.4,.5,1) .2s both}@keyframes swing{0%{transform:rotate(-9deg)}100%{transform:rotate(-2deg)}}}
+section{padding:2.5rem 0;border-top:1px solid var(--rule)}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem 2.5rem;margin:0}
+.facts div{padding-left:1rem;border-left:3px solid var(--tag)}
+.facts dt{font-family:Archivo,system-ui,sans-serif;font-weight:650;font-size:.98rem}
+.facts dd{margin:.2rem 0 0;color:var(--muted)}
+figure{margin:0}
+figure img{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--rule);border-radius:6px}
+figcaption{margin-top:.75rem;color:var(--muted);font-size:.95rem;max-width:70ch}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:3rem}
+ol,ul{margin:0;padding-left:1.3rem}
+li{margin:.35rem 0;max-width:62ch}
+.demo{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:1.75rem;display:flex;justify-content:space-between;align-items:center;gap:1.5rem;flex-wrap:wrap}
+.demo p{margin:.4rem 0 0;color:var(--muted);max-width:52ch}
+footer{padding:2.5rem 0 3rem;border-top:1px solid var(--rule);font-size:.95rem;color:var(--muted)}
+footer ul{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;margin:.6rem 0 1.4rem}
+@media (max-width:760px){.hero,.two{grid-template-columns:1fr;gap:2.25rem}.facts{grid-template-columns:1fr}.tagbox{justify-content:flex-start;padding-top:2.5rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><a href="https://github.com/jesusgonzalezmexdata-ux">Jesús R. L. González</a><a href="https://github.com/jesusgonzalezmexdata-ux/predictive-quality-mlops">Source code on GitHub</a></header>
+<main>
+<div class="hero">
+<div>
+<h1>Which semiconductor lots should be held for inspection?</h1>
+<p class="lead">590 sensors per lot, a weak signal and a process that changes month to month. The system ranks lots by risk, sets the threshold by cost and reports the saving with its uncertainty.</p>
+<div class="actions"><a class="btn primary" href="https://huggingface.co/spaces/JesusRLGonzalez/predictive-quality-mlops">Open the live demo</a><a class="btn secondary" href="https://github.com/jesusgonzalezmexdata-ux/predictive-quality-mlops">Read the code</a></div>
+</div>
+<div class="tagbox"><p class="tag"><span class="value">Not proven</span><span class="label">economic saving: 95 % interval −22k to +20k MXN</span><span class="note">Chronological holdout, 313 lots, reported as is</span></p></div>
+</div>
+<section aria-labelledby="result"><h2 id="result">What the result means</h2><dl class="facts"><div><dt>Ranking</dt><dd>PR-AUC 0.089 against a 0.054 failure rate; lift 2.4× in the top 10 %</dd></div><div><dt>Leakage found</dt><dd>A random split inflated PR-AUC from 0.09 to 0.154</dd></div><div><dt>Drift</dt><dd>142 of 273 sensors shift between training and holdout; /drift raises the alert</dd></div><div><dt>Delivery</dt><dd>FastAPI, Streamlit, prediction log and Docker</dd></div></dl></section>
+<section aria-labelledby="chart"><h2 id="chart" class="visually-plain">The main chart</h2><figure><img src="figures/costo_vs_umbral.png" alt="Holdout cost against the decision threshold" loading="lazy"><figcaption>Holdout cost against the threshold. The pre-chosen threshold sits close to, but not at, the best possible one.</figcaption></figure></section>
+<section class="two"><div><h2>How the decision was made</h2><ol><li>Chronological split; expanding-window validation inside training.</li><li>Sensor cleaning fitted only on each fold&#x27;s past.</li><li>Threshold by expected cost, not by F1.</li><li>One holdout evaluation, stress tests and drift monitoring.</li></ol></div><div><h2>What it does not claim</h2><ul><li>The saving is not statistically demonstrated.</li><li>Sensor names are anonymous; SHAP rankings are leads, not causes.</li><li>Costs are assumptions in the configuration.</li></ul><p><a href="https://github.com/jesusgonzalezmexdata-ux/predictive-quality-mlops/blob/main/MODEL_CARD.md">Model Card</a> and full evidence in the repository.</p></div></section>
+<section><div class="demo"><div><h2>Try it</h2><p>See each lot&#x27;s risk, the recommended action and the observed failure rate of similar lots.</p></div><a class="btn primary" href="https://huggingface.co/spaces/JesusRLGonzalez/predictive-quality-mlops">Open the live demo</a></div></section>
+</main>
+<footer><p>Other projects</p><ul><li><a href="https://jesusgonzalezmexdata-ux.github.io/aps-failure-intelligence/">APS failure triage</a></li><li><a href="https://jesusgonzalezmexdata-ux.github.io/steel-plates-quality-mlops/">Steel-plate defect classification</a></li><li><a href="https://jesusgonzalezmexdata-ux.github.io/predictive-maintenance-survival-cmapss/">Condition-based maintenance</a></li><li><a href="https://jesusgonzalezmexdata-ux.github.io/scrap-copq-analytics/">Scrap and cost of poor quality</a></li><li><a href="https://jesusgonzalezmexdata-ux.github.io/predix/">Demand and inventory for grocery stores</a></li></ul><p>Jesús R. L. González, data scientist in manufacturing operations and quality.</p></footer>
+</div>
+</body>
+</html>

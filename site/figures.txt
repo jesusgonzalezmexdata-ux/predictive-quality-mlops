@@ -1,0 +1,1 @@
+reports/figures/costo_vs_umbral.png

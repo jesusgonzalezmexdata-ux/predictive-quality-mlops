@@ -2,6 +2,8 @@
 
 *English · [Español](README.es.md)*
 
+**[Live demo](https://huggingface.co/spaces/JesusRLGonzalez/predictive-quality-mlops)** | **[Project page](https://jesusgonzalezmexdata-ux.github.io/predictive-quality-mlops/)**
+
 **An end-to-end decision-support system for industrial quality:** it predicts which semiconductor lots (SECOM) are at risk of failing, translates the result into pesos saved or spent, serves it as an API and a dashboard, and watches its own degradation. Predictive maintenance on NASA C-MAPSS lives in its own repository: [predictive-maintenance-survival-cmapss](https://github.com/jesusgonzalezmexdata-ux/predictive-maintenance-survival-cmapss).
 
 ## Executive summary

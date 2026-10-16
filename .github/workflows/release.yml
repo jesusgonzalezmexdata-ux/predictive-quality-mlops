@@ -16,9 +16,12 @@ jobs:
       TAG: ${{ inputs.tag || github.ref_name }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      # Notes and the asset list come from the default branch, so older tags get them too;
+      # the evidence files themselves are taken from the tagged commit.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
       - name: Release notes from CHANGELOG
         run: |
           python3 - <<'PY'
@@ -26,18 +29,22 @@ jobs:
           tag = os.environ["TAG"].lstrip("v")
           text = open("CHANGELOG.md", encoding="utf-8").read()
           m = re.search(rf"^## \[{re.escape(tag)}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.S | re.M)
-          body = m.group(1).strip() if m else "See CHANGELOG.md."
-          open("notes.md", "w", encoding="utf-8").write(body + "\n")
-          open("title.txt", "w", encoding="utf-8").write(f"v{tag}")
+          open("notes.md", "w", encoding="utf-8").write((m.group(1).strip() if m else "See CHANGELOG.md.") + "\n")
           PY
-      - name: Evidence bundle
+      - name: Evidence bundle from the tagged commit
         run: |
-          mapfile -t paths < <(grep -v '^$' deploy/release-assets.txt)
-          zip -qr "evidence-${TAG}.zip" "${paths[@]}" CHANGELOG.md LICENSE
+          keep=()
+          while IFS= read -r p; do
+            [ -z "$p" ] && continue
+            git cat-file -e "$TAG:$p" 2>/dev/null && keep+=("$p")
+          done < deploy/release-assets.txt
+          git cat-file -e "$TAG:LICENSE" 2>/dev/null && keep+=("LICENSE")
+          git archive --format=zip -o "evidence-${TAG}.zip" "$TAG" -- "${keep[@]}"
+          unzip -l "evidence-${TAG}.zip" | tail -1
       - name: Create or update the release
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "evidence-${TAG}.zip" --clobber
           else
-            gh release create "$TAG" "evidence-${TAG}.zip" --title "$(cat title.txt)" --notes-file notes.md --verify-tag
+            gh release create "$TAG" "evidence-${TAG}.zip" --title "$TAG" --notes-file notes.md --verify-tag
           fi

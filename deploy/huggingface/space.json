@@ -7,17 +7,38 @@
   "requirements": [
     "plotly",
     "scikit-learn",
-    "pyyaml"
+    "pyyaml",
+    "scipy",
+    "openpyxl"
   ],
   "include": [
     "app/streamlit_app.py",
+    "app/estilo.py",
+    "app/ui_viabilidad.py",
     "src/pqm",
     "reports",
     "config",
     "docs/img"
   ],
-  "short_description": "Which semiconductor lots to hold, with honest uncertainty",
-  "summary": "Each lot's risk, the recommended action and the observed failure rate of similar lots; the saving is reported with its uncertainty.",
+  "short_description": "Is a quality model worth deploying? Try your lots",
+  "summary": "SECOM semiconductor lots, or upload your own process history: a one-page viability verdict (deploy / do not deploy / collect more data) with audit-style findings, computed in your browser.",
   "repo": "predictive-quality-mlops",
-  "license": "mit"
+  "license": "mit",
+  "streamlitConfig": {
+    "theme.base": "light",
+    "theme.primaryColor": "#0E0F11",
+    "theme.backgroundColor": "#FFFFFF",
+    "theme.secondaryBackgroundColor": "#F6F7F5",
+    "theme.textColor": "#0E0F11",
+    "theme.redColor": "#D7261E",
+    "theme.greenColor": "#1F7A3D",
+    "theme.yellowColor": "#FFD21F",
+    "theme.grayColor": "#4A4E54",
+    "theme.linkColor": "#0E0F11",
+    "theme.borderColor": "#C9CDD1",
+    "theme.showWidgetBorder": true,
+    "theme.baseRadius": "4px",
+    "theme.buttonRadius": "6px",
+    "theme.dataframeHeaderBackgroundColor": "#F6F7F5"
+  }
 }

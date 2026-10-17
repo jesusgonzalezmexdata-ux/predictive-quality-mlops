@@ -13,3 +13,4 @@ uvicorn>=0.29
 pydantic>=2.6
 streamlit>=1.40
 plotly>=5.20
+openpyxl>=3.1

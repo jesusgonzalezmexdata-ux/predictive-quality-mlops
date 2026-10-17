@@ -6,8 +6,8 @@ authors:
   - family-names: "González"
     given-names: "Jesús R. L."
 license: MIT
-version: "1.1.0"
-date-released: "2026-10-16"
+version: "1.2.0"
+date-released: "2026-10-17"
 repository-code: "https://github.com/jesusgonzalezmexdata-ux/predictive-quality-mlops"
 url: "https://jesusgonzalezmexdata-ux.github.io/predictive-quality-mlops/"
 keywords:

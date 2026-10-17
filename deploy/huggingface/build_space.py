@@ -37,7 +37,7 @@ def index_html(files: list[str]) -> str:
         "entrypoint": CONF["entrypoint"],
         "requirements": CONF["requirements"],
         "files": {f: {"url": f"./{f}"} for f in files},
-        "streamlitConfig": {"theme.base": "light", "client.toolbarMode": "viewer"},
+        "streamlitConfig": {"theme.base": "light", "client.toolbarMode": "viewer", **CONF.get("streamlitConfig", {})},
     }
     title = html.escape(CONF["title"])
     return f"""<!doctype html>

@@ -10,12 +10,23 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "app"))
 from pqm.config import CostosCalidad  # noqa: E402
 from pqm.evaluation import monetizar  # noqa: E402
 import numpy as np  # noqa: E402
 from pqm.explain import accion_sugerida, cargar_alias, nombre  # noqa: E402
 
 st.set_page_config(page_title="Calidad predictiva SECOM", layout="wide")
+from estilo import aplicar as aplicar_estilo  # noqa: E402
+
+aplicar_estilo()
+modo = st.segmented_control("Modo", ["Caso SECOM", "Evalúa tu proceso"], default="Caso SECOM", required=True,
+                            label_visibility="collapsed")
+if modo == "Evalúa tu proceso":
+    from ui_viabilidad import render  # noqa: E402
+
+    render()
+    st.stop()
 
 
 @st.cache_data

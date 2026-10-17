@@ -1,7 +1,21 @@
+# Tema «Señal de campo» (Figma «Predix · MVP 3», propuesta B), compartido por las demos del portafolio.
 [theme]
 base = "light"
-primaryColor = "#0B5394"
+primaryColor = "#0E0F11"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F1F4F8"
-textColor = "#1B2430"
-font = "sans serif"
+secondaryBackgroundColor = "#F6F7F5"
+textColor = "#0E0F11"
+redColor = "#D7261E"
+greenColor = "#1F7A3D"
+yellowColor = "#FFD21F"
+grayColor = "#4A4E54"
+linkColor = "#0E0F11"
+borderColor = "#C9CDD1"
+showWidgetBorder = true
+baseRadius = "4px"
+buttonRadius = "6px"
+font = "Barlow:https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&display=swap, sans-serif"
+headingFont = "Barlow Condensed:https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&display=swap, sans-serif"
+headingFontWeights = [700, 700, 700, 600, 600, 600]
+chartCategoricalColors = ["#0E0F11", "#FFD21F", "#D7261E", "#1F7A3D", "#4A4E54", "#C9CDD1"]
+dataframeHeaderBackgroundColor = "#F6F7F5"

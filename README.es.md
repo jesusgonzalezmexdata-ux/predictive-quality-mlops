@@ -13,6 +13,16 @@ Este sistema convierte datos de 590 sensores en una **decisión por lote** (libe
 
 ![Dashboard](docs/img/dashboard_impacto.png)
 
+## Evalúa tu proceso antes de invertir (MVP)
+
+La lección de SECOM es el producto: **saber si un modelo de calidad paga antes de desplegarlo**. En la [demo](https://huggingface.co/spaces/JesusRLGonzalez/predictive-quality-mlops), modo **«Evalúa tu proceso»**, o con `make dictamen LOTES=lotes.csv`:
+
+1. Sube el histórico de lotes (`.xlsx` o `.csv`): fecha, pasa / falla y una columna numérica por variable de proceso medida antes del resultado.
+2. Captura el costo de dejar pasar un lote malo, de inspeccionar un lote marcado y de retrabajar una falla detectada.
+3. Obtén un dictamen de una página, **desplegar / no desplegar / recolectar más datos**, con hallazgos en lenguaje de auditoría (criterio, evidencia, resultado, riesgo): validación sin fuga, señal contra el azar, ahorro contra la mejor alternativa simple con intervalo bootstrap, cuántas fallas más lo demostrarían, deriva y sensibilidad a costos.
+
+Tres procesos simulados, uno por dictamen: inyección de plástico con señal clara → **desplegar** (36 mil pesos de ahorro en 300 lotes, intervalo del 95 %: 25 a 43 mil); el mismo proceso con señal moderada y 10 meses de datos → **recolectar más datos** (≈ 53 fallas en el periodo evaluado, ≈ 10 meses más); 120 sensores con ruido como SECOM → **no desplegar**. Todo corre con scikit-learn en el navegador. Protocolo de piloto: [`docs/MVP_PILOTO.md`](docs/MVP_PILOTO.md).
+
 ## Taxonomía de decisión (ventaja competitiva)
 ```mermaid
 flowchart LR

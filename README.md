@@ -13,6 +13,16 @@ The system turns data from 590 sensors into a **decision per lot** (release, mon
 
 ![Dashboard](docs/img/dashboard_impacto.png)
 
+## Evaluate your own process before investing (MVP)
+
+SECOM's lesson is the product: **find out whether a quality model pays off before deploying it**. In the [live demo](https://huggingface.co/spaces/JesusRLGonzalez/predictive-quality-mlops), mode **«Evalúa tu proceso»** (Spanish), or `make dictamen LOTES=lots.csv`:
+
+1. Upload your lot history (`.xlsx` or `.csv`): date, pass / fail and one numeric column per process variable measured before the result.
+2. Enter the cost of letting a bad lot through, of inspecting a flagged lot and of reworking a detected failure.
+3. Get a one-page verdict, **deploy / do not deploy / collect more data**, with audit-style findings (criterion, evidence, result, risk): leakage-free validation, signal against chance, saving against the best simple alternative with a bootstrap interval, how many more failures would prove it, drift and cost sensitivity.
+
+Three simulated processes, one per verdict: injection moulding with a clear signal → **deploy** (MXN 36 k saved on 300 lots, 95 % interval 25–43 k); the same process with a moderate signal and 10 months of data → **collect more data** (≈ 53 failures in the evaluated period, ≈ 10 more months); 120 noisy sensors like SECOM → **do not deploy**. Everything runs with scikit-learn in the visitor's browser. Pilot protocol: [`docs/MVP_PILOTO.md`](docs/MVP_PILOTO.md) (Spanish).
+
 ## Decision taxonomy
 ```mermaid
 flowchart LR

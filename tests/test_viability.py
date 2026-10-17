@@ -115,3 +115,12 @@ def test_ui_mode_renders_example():
     assert not at.exception
     assert any("DESPLEGAR" in s.value for s in at.success)
     assert isinstance(pd.DataFrame(at.dataframe[-1].value), pd.DataFrame)
+
+
+def test_runs_with_the_stub_pyarrow_of_the_browser(monkeypatch):
+    """stlite trae un pyarrow incompleto; train_test_split y permutation_importance de scikit-learn fallaban con él."""
+    import types
+
+    monkeypatch.setitem(__import__("sys").modules, "pyarrow", types.ModuleType("pyarrow"))
+    df, variables, _ = vi.validate(vi.example("Inyección de plástico · señal moderada, 10 meses de datos"))
+    assert vb.evaluate(df, variables, FAST)["evaluable"]

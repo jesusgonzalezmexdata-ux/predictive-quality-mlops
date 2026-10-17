@@ -22,9 +22,7 @@ import pandas as pd
 from scipy.stats import fisher_exact
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -88,6 +86,30 @@ def _oof(X: pd.DataFrame, y: np.ndarray, name: str, aj: Ajustes):
     return np.concatenate(idx), np.concatenate(scores)
 
 
+# Sin train_test_split ni permutation_importance de scikit-learn: en Pyodide su chequeo de pyarrow falla.
+def _stratified_split(X: pd.DataFrame, y: np.ndarray, frac: float, seed: int):
+    rng = np.random.default_rng(seed)
+    test = np.zeros(len(y), bool)
+    for cls in (0, 1):
+        idx = np.flatnonzero(y == cls)
+        test[rng.choice(idx, size=max(1, int(round(len(idx) * frac))), replace=False)] = True
+    return X.iloc[~test], X.iloc[test], y[~test], y[test]
+
+
+def _permutation_importance(model, X: pd.DataFrame, y: np.ndarray, base: float, seed: int, repeats: int = 3) -> np.ndarray:
+    """Caída media de PR-AUC al revolver cada variable en el periodo evaluado."""
+    rng = np.random.default_rng(seed)
+    out = np.zeros(X.shape[1])
+    for j, col in enumerate(X.columns):
+        drops = []
+        for _ in range(repeats):
+            Xp = X.copy()
+            Xp[col] = rng.permutation(Xp[col].to_numpy())
+            drops.append(base - pr_auc(y, model.predict_proba(Xp)[:, 1]))
+        out[j] = float(np.mean(drops))
+    return out
+
+
 def _per_lot(y, flag, c: CostosCalidad):
     y, f = np.asarray(y, bool), np.asarray(flag, bool)
     model = np.where(y & f, c.inspeccion + c.retrabajo_detectado, 0) + np.where(~y & f, c.inspeccion, 0) + np.where(y & ~f, c.scrap_no_detectado, 0)
@@ -142,7 +164,7 @@ def evaluate(df: pd.DataFrame, variables: list[str], aj: Ajustes | None = None) 
         need_months = max(0.0, (need_lots - len(yho)) / base["lotes_por_mes"])
 
     # 3) Riesgos: fuga por partición aleatoria, deriva y cambio de la tasa de falla, costos.
-    Xa, Xb, ya, yb = train_test_split(Xtr, ytr, test_size=0.25, stratify=ytr, random_state=aj.semilla)
+    Xa, Xb, ya, yb = _stratified_split(Xtr, ytr, 0.25, aj.semilla)
     pr_random = pr_auc(yb, _fresh(elegido, aj.semilla).fit(Xa, ya).predict_proba(Xb)[:, 1])
     psis = pd.Series({c: psi(Xtr[c], Xho[c]) for c in variables}).dropna()
     deriva = float((psis > 0.25).mean()) if len(psis) else 0.0
@@ -153,8 +175,7 @@ def evaluate(df: pd.DataFrame, variables: list[str], aj: Ajustes | None = None) 
         u, _ = best_threshold(ytr[i_oof], s_oof, c.costos)
         sens.append(dict(factor=k, razon=c.scrap_no_detectado / c.inspeccion,
                          ahorro=monetizar(yho, p, u, c.costos)["ahorro_vs_mejor_baseline"]))
-    imp = permutation_importance(model, Xho, yho, scoring="average_precision", n_repeats=3, random_state=aj.semilla)
-    top = (pd.DataFrame({"variable": variables, "importancia": imp.importances_mean, "psi": [psis.get(v, np.nan) for v in variables]})
+    top = (pd.DataFrame({"variable": variables, "importancia": _permutation_importance(model, Xho, yho, pr, aj.semilla), "psi": [psis.get(v, np.nan) for v in variables]})
            .sort_values("importancia", ascending=False).head(8).reset_index(drop=True))
 
     r = {**base, "evaluable": True, "modelo": elegido, "cv_pr_auc": cv, "umbral": umbral, "pr_auc": pr, "pr_auc_ic": (pr_lo, pr_hi),

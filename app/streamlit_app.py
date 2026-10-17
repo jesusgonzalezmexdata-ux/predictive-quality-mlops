@@ -6,7 +6,15 @@ from pathlib import Path
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio
 import streamlit as st
+
+# Paleta «Señal de campo» para todas las gráficas del caso SECOM.
+pio.templates["senal"] = go.layout.Template(layout=dict(
+    colorway=["#0E0F11", "#FFD21F", "#D7261E", "#1F7A3D", "#4A4E54"], font=dict(family="Barlow, system-ui, sans-serif", color="#0E0F11"),
+    paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", xaxis=dict(gridcolor="#E9EBE7"), yaxis=dict(gridcolor="#E9EBE7")))
+pio.templates.default = "plotly_white+senal"
+px.defaults.template = "plotly_white+senal"
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -76,19 +84,19 @@ with t0:
     pr = hh.p[i]
     vec = hh.assign(d=(hh.p - pr).abs()).nsmallest(40, "d")  # 40 lotes con puntaje más parecido
     if pr >= umbral:
-        color, estado, accion = "🔴", "ALTO RIESGO", ("Retener el lote, inspección al 100 % y registrarlo como posible salida no conforme "
+        color, estado, accion = ":red[●]", "ALTO RIESGO", ("Retener el lote, inspección al 100 % y registrarlo como posible salida no conforme "
                                                        "(ISO 9001 · 8.7 Control de salidas no conformes).")
     elif pr >= umbral / 2:
-        color, estado, accion = "🟡", "VIGILAR", "Muestreo reforzado y registro del resultado para el seguimiento del desempeño (ISO 9001 · 9.1.3)."
+        color, estado, accion = ":orange[●]", "VIGILAR", "Muestreo reforzado y registro del resultado para el seguimiento del desempeño (ISO 9001 · 9.1.3)."
     else:
-        color, estado, accion = "🟢", "NORMAL", "Liberar con el flujo habitual."
+        color, estado, accion = ":green[●]", "NORMAL", "Liberar con el flujo habitual."
     previo = hh.p[max(0, i - 40):max(0, i - 20)]
     reciente = hh.p[max(0, i - 19):i + 1]
     tend = (reciente.mean() - previo.mean()) if len(previo) else 0.0
     k1, k2, k3 = st.columns([1, 1, 2])
-    k1.metric("1 · Riesgo actual", f"{pr:.1%}", f"{color} {estado}", delta_color="off")
+    k1.metric("1 · Riesgo actual", f"{pr:.1%}", estado, delta_color="off")
     k2.metric("2 · Tendencia (20 lotes)", f"{reciente.mean():.1%}", f"{tend * 100:+.1f} pp vs 20 previos", delta_color="inverse")
-    k3.markdown(f"**3 · Acción recomendada**\n\n{accion}")
+    k3.markdown(f"**3 · Acción recomendada** {color}\n\n{accion}")
     ex = np.load(ROOT / "reports/holdout_explain.npz", allow_pickle=True)
     cols_ = list(ex["cols"])
     sv_, z_ = ex["sv"][i], ex["z"][i]
@@ -100,7 +108,7 @@ with t0:
         st.write(f"- {'↑ sube' if sv_[j] > 0 else '↓ baja'} el riesgo: **{nom}** (`{cols_[j]}`), valor estandarizado {z_[j]:+.2f}"
                  + (f" → *verificar: {sug}* (sugerencia hipotética)" if sug and sv_[j] > 0 else ""))
     if any(abs(z_[j]) > 10 for j in top):
-        st.warning("⚠️ Calidad del dato: un factor principal tiene un valor a más de 10 desviaciones estándar. Antes de retener el lote, "
+        st.warning("Calidad del dato: un factor principal tiene un valor a más de 10 desviaciones estándar. Antes de retener el lote, "
                    "verifique la lectura del sensor (posible error de medición o sensor casi constante). ISO 9001 · 7.1.5.")
     st.caption("Los valores estandarizados y las sugerencias dependen de alias ilustrativos; con el diccionario real de tags se sustituyen. "
                "Se muestran solo 3 KPIs y 3 factores para no sobrecargar al operador.")
@@ -110,12 +118,12 @@ with t0:
     st.markdown("##### Reglas a nivel proceso")
     d_ = m["deriva"]
     pct = d_["sensores_con_deriva"] / d_["total"]
-    st.write(f"{'🔴' if pct > 0.2 else '🟢'} **Deriva de sensores:** {pct:.0%} con PSI>0.25. " +
+    st.write(f"{':red[●]' if pct > 0.2 else ':green[●]'} **Deriva de sensores:** {pct:.0%} con PSI>0.25. " +
              ("**Acción requerida:** reentrenar el modelo y revisar calibración de instrumentos (ISO 9001 · 7.1.5 Recursos de seguimiento y medición)."
               if pct > 0.2 else "Sin acción."))
     tm_ = pd.Series(m["tasa_falla_mensual"])
     mx = tm_.idxmax()
-    st.write(f"{'🔴' if tm_.max() > 2 * m['prevalencia'] else '🟢'} **Tasa de falla mensual máxima:** {tm_.max():.1%} ({mx}). " +
+    st.write(f"{':red[●]' if tm_.max() > 2 * m['prevalencia'] else ':green[●]'} **Tasa de falla mensual máxima:** {tm_.max():.1%} ({mx}). " +
              ("**Acción requerida:** análisis de causa raíz y acción correctiva (ISO 9001 · 10.2 No conformidad y acción correctiva)."
               if tm_.max() > 2 * m["prevalencia"] else "Sin acción."))
     st.caption("Los umbrales de estas reglas (20 % de sensores, 2× la tasa media) son criterios de ejemplo a validar con ingeniería de calidad.")
@@ -140,7 +148,7 @@ with t1:
     txt = [[f"Lote bueno, sin alarma<br><b>{z[0][0]}</b><br>$0", f"Falsa alarma<br><b>{z[0][1]}</b><br>${costo_cel[0][1]:,.0f}"],
            [f"Scrap no detectado<br><b>{z[1][0]}</b><br>${costo_cel[1][0]:,.0f}", f"Falla detectada<br><b>{z[1][1]}</b><br>${costo_cel[1][1]:,.0f}"]]
     fig = go.Figure(go.Heatmap(z=costo_cel, text=txt, texttemplate="%{text}", x=["Sin alarma", "Alarma"],
-                               y=["Lote bueno", "Lote defectuoso"], colorscale="Reds", showscale=False))
+                               y=["Lote bueno", "Lote defectuoso"], colorscale=[[0, "#FFFFFF"], [1, "#D7261E"]], showscale=False))
     fig.update_layout(title="Matriz de confusión monetizada", height=360, yaxis=dict(autorange="reversed"))
     st.plotly_chart(fig, width="stretch")
     cmp = pd.DataFrame({"Estrategia": ["Sin modelo", "Inspeccionar todo", "Con modelo"],
@@ -153,7 +161,7 @@ with t1:
     st.caption("El beneficio cambia de signo según la razón de costos: el modelo solo conviene en una banda intermedia.")
 
 with t2:
-    st.caption("⚠️ Los nombres físicos son **alias ilustrativos**: SECOM no publica qué mide cada sensor. "
+    st.caption("Los nombres físicos son **alias ilustrativos**: SECOM no publica qué mide cada sensor. "
                "Sirven para mostrar cómo se vería con el diccionario real de tags de la planta.")
     sh = pd.DataFrame(m["shap_top"])
     sh["Sensor (alias)"] = sh.sensor.map(lambda s: nombre(s, alias))

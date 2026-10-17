@@ -177,6 +177,18 @@ Note: the Docker image was not built in the development environment (no daemon);
 
 Data: [UCI SECOM](https://archive.ics.uci.edu/dataset/179/secom), public and cited from its source. Stress tests and corrected errors: [`docs/ERRORES_Y_PRUEBAS.md`](docs/ERRORES_Y_PRUEBAS.md) (Spanish). Model Card: [MODEL_CARD.md](MODEL_CARD.md).
 
+## Skills demonstrated
+
+| Skill | Evidence |
+|---|---|
+| Model validation / Validación de modelos | `src/pqm/data.py` (`split_temporal`), `src/pqm/train.py` (`oof_temporal`) |
+| Model monitoring, data drift / Monitoreo de modelos, deriva | `src/pqm/drift.py` (PSI, KS) |
+| Explainable AI (SHAP) / IA explicable | `src/pqm/explain.py` |
+| Experiment design, sample size / Diseño de experimentos, tamaño de muestra | `src/pqm/viability.py` (mínimo de fallas, intervalo del ahorro), `docs/MVP_PILOTO.md` |
+| Machine learning, MLOps | `src/pqm/models.py`, `src/pqm/api/`, `Dockerfile` |
+| ISO 9001 | `src/pqm/viability_report.py` (cláusulas 8.7 y 9.1.3) |
+| Data visualization, Git, CI, testing / Visualización de datos, Git, integración continua, pruebas | `app/streamlit_app.py`, `.github/workflows/`, `tests/` |
+
 ## License
 
 Code under [MIT](LICENSE). SECOM data keep their source terms.

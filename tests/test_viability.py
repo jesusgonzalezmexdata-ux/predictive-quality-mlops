@@ -121,6 +121,11 @@ def test_runs_with_the_stub_pyarrow_of_the_browser(monkeypatch):
     """stlite trae un pyarrow incompleto; train_test_split y permutation_importance de scikit-learn fallaban con él."""
     import types
 
-    monkeypatch.setitem(__import__("sys").modules, "pyarrow", types.ModuleType("pyarrow"))
+    stub = types.ModuleType("pyarrow")  # como el de stlite: tiene Table y Array, pero no RecordBatch
+    stub.Table, stub.Array, stub.ChunkedArray = (type(n, (), {}) for n in ("Table", "Array", "ChunkedArray"))
+    monkeypatch.setitem(__import__("sys").modules, "pyarrow", stub)
+    import importlib
+
+    importlib.reload(vb)
     df, variables, _ = vi.validate(vi.example("Inyección de plástico · señal moderada, 10 meses de datos"))
     assert vb.evaluate(df, variables, FAST)["evaluable"]

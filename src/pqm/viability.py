@@ -15,6 +15,7 @@ Todo corre con scikit-learn para que funcione en el navegador (Pyodide).
 """
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 
 import numpy as np
@@ -37,6 +38,14 @@ from pqm.evaluation import (
     monetizar,
     pr_auc,
 )
+
+# stlite carga un pyarrow incompleto; scikit-learn pregunta por pa.RecordBatch al validar entradas. Se completan
+# las clases que falten con tipos vacíos (nunca coinciden con un DataFrame), sin tocar un pyarrow real.
+_pa = sys.modules.get("pyarrow")
+if _pa is not None:
+    for _name in ("Table", "RecordBatch", "Array", "ChunkedArray"):
+        if not hasattr(_pa, _name):
+            setattr(_pa, _name, type(_name, (), {}))
 
 MIN_FAILURES, MIN_HOLDOUT_FAILURES = 20, 5
 DESPLEGAR, NO_DESPLEGAR, RECOLECTAR = "DESPLEGAR", "NO DESPLEGAR", "RECOLECTAR MÁS DATOS"
@@ -86,7 +95,7 @@ def _oof(X: pd.DataFrame, y: np.ndarray, name: str, aj: Ajustes):
     return np.concatenate(idx), np.concatenate(scores)
 
 
-# Sin train_test_split ni permutation_importance de scikit-learn: en Pyodide su chequeo de pyarrow falla.
+# Partición estratificada e importancia por permutación propias: pocas dependencias de scikit-learn en el navegador.
 def _stratified_split(X: pd.DataFrame, y: np.ndarray, frac: float, seed: int):
     rng = np.random.default_rng(seed)
     test = np.zeros(len(y), bool)
